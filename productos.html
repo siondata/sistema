@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Inventario de Productos</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      border: 3px solid rgb(255, 0, 255);
+      border-radius: 10px;
+    }
+    h1 { text-align: center; }
+    table { width: 100%; border-collapse: collapse; margin-top: 30px; }
+    th, td {
+      padding: 10px;
+      border: 1px solid #ccc;
+      text-align: left;
+    }
+    th { background-color: #f2f2f2; }
+    form { margin-top: 40px; border-top: 1px solid #ccc; padding-top: 20px; }
+    input, button {
+      padding: 10px;
+      font-size: 16px;
+      margin-bottom: 10px;
+      width: 100%;
+    }
+    button {
+      background-color: #009c24;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #007f1f;
+    }
+    #mensaje {
+      margin-top: 15px;
+      font-weight: bold;
+    }
+    #loginSection, #mainSection {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+<!-- 🔐 LOGIN -->
+<div id="loginSection">
+  <h2>Iniciar Sesión</h2>
+  <input type="email" id="email" placeholder="Correo electrónico" required>
+  <input type="password" id="password" placeholder="Contraseña" required>
+  <button id="loginBtn">Ingresar</button>
+  <p id="loginError" style="color:red;"></p>
+</div>
+
+<!-- 📦 CONTENIDO SOLO SI ESTÁ AUTENTICADO -->
+<div id="mainSection">
+  <h1>Productos en Stock</h1>
+  
+  <form id="formAgregar">
+    <h2>Añadir Nuevo Producto</h2>
+    <input type="text" id="nombre" placeholder="Nombre del producto" required>
+    <input type="number" id="precio" placeholder="Precio (Gs.)" min="0" required>
+    <input type="number" id="costo" placeholder="Costo (Gs.)" min="0" required>
+    <input type="number" id="stock" placeholder="Cantidad disponible" min="0" required>
+    <button type="submit">Guardar Producto</button>
+    <div id="mensaje"></div>
+<input type="text" id="busqueda" placeholder="Buscar producto por nombre..." style="width: 40%; padding: 10px; margin-top: 20px; font-size: 16px;">
+
+
+  </form>
+    <table>
+    <thead>
+      <tr>
+        <th>Producto</th>
+        <th>Precio</th>
+        <th>Stock Disponible</th>
+        <th>Costo (Gs.)</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="tabla-productos"></tbody>
+  </table>
+
+  <button id="logoutBtn" style="margin-top: 20px;">Cerrar sesión</button>
+</div>
+
+<!-- 🔧 SCRIPT -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    getFirestore,
+    collection,
+    getDocs,
+    addDoc,
+    query,
+    orderBy,
+    doc,
+    updateDoc
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCr0SM_u0c4aEG_tT_CXWLcvd6alZJT44c",
+    authDomain: "siondata22.firebaseapp.com",
+    projectId: "siondata22",
+    storageBucket: "siondata22.appspot.com",
+    messagingSenderId: "946379205241",
+    appId: "1:946379205241:web:0fe04a6246518451ee42a8",
+    measurementId: "G-EX6YDJYS1N"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  const loginSection = document.getElementById("loginSection");
+  const mainSection = document.getElementById("mainSection");
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const loginError = document.getElementById("loginError");
+  const email = document.getElementById("email");
+  const password = document.getElementById("password");
+
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      loginSection.style.display = "none";
+      mainSection.style.display = "block";
+      cargarProductos();
+    } else {
+      loginSection.style.display = "block";
+      mainSection.style.display = "none";
+    }
+  });
+
+  loginBtn.addEventListener("click", async () => {
+    try {
+      await signInWithEmailAndPassword(auth, email.value, password.value);
+    } catch (error) {
+      loginError.textContent = "❌ " + error.message;
+    }
+  });
+
+  logoutBtn.addEventListener("click", async () => {
+    await signOut(auth);
+  });
+
+  const tablaBody = document.getElementById("tabla-productos");
+  const mensaje = document.getElementById("mensaje");
+  let productosCargados = [];
+
+  async function cargarProductos() {
+    tablaBody.innerHTML = "";
+    productosCargados = [];
+    const q = query(collection(db, "productos"), orderBy("nombre"));
+    const snapshot = await getDocs(q);
+    snapshot.forEach(docSnap => {
+      productosCargados.push({ id: docSnap.id, ...docSnap.data() });
+    });
+    mostrarProductos(productosCargados);
+  }
+
+  function mostrarProductos(lista) {
+    tablaBody.innerHTML = "";
+    lista.forEach(producto => {
+      const fila = document.createElement("tr");
+      fila.innerHTML = `
+        <td>${producto.nombre}</td>
+        <td><input type="number" value="${producto.precio}" min="0" id="precio-${producto.id}" style="width: 100px;"></td>
+        <td><input type="number" value="${producto.stock}" min="0" id="stock-${producto.id}" style="width: 80px;"></td>
+        <td><input type="number" value="${producto.costo ?? ''}" min="0" id="costo-${producto.id}" style="width: 100px;"></td>
+        <td><button onclick="guardarCambios('${producto.id}')">💾 Guardar</button></td>
+      `;
+      tablaBody.appendChild(fila);
+    });
+  }
+
+  window.guardarCambios = async function (id) {
+    const nuevoPrecio = parseInt(document.getElementById(`precio-${id}`).value);
+    const nuevoStock = parseInt(document.getElementById(`stock-${id}`).value);
+    const nuevoCosto = parseInt(document.getElementById(`costo-${id}`).value);
+    if (isNaN(nuevoPrecio) || isNaN(nuevoStock) || isNaN(nuevoCosto)) {
+      alert("⚠️ Ingrese valores válidos.");
+      return;
+    }
+    try {
+      await updateDoc(doc(db, "productos", id), {
+        precio: nuevoPrecio,
+        stock: nuevoStock,
+        costo: nuevoCosto
+      });
+      alert("✅ Producto actualizado.");
+      cargarProductos();
+    } catch (error) {
+      console.error("❌ Error al actualizar:", error);
+      alert("❌ No se pudo actualizar el producto.");
+    }
+  };
+
+  document.getElementById("busqueda").addEventListener("input", (e) => {
+    const texto = e.target.value.toLowerCase().trim();
+    const filtrados = productosCargados.filter(p => p.nombre.toLowerCase().includes(texto));
+    mostrarProductos(filtrados);
+  });
+
+  document.getElementById("formAgregar").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    mensaje.textContent = "";
+    const nombre = document.getElementById("nombre").value.trim();
+    const precio = parseInt(document.getElementById("precio").value);
+    const stock = parseInt(document.getElementById("stock").value);
+    const costo = parseInt(document.getElementById("costo").value);
+    if (!nombre || isNaN(precio) || isNaN(stock)) {
+      mensaje.textContent = "❌ Complete todos los campos correctamente.";
+      return;
+    }
+    try {
+      await addDoc(collection(db, "productos"), { nombre, precio, stock, costo });
+      mensaje.textContent = "✅ Producto añadido correctamente.";
+      document.getElementById("formAgregar").reset();
+      cargarProductos();
+    } catch (error) {
+      console.error("Error al agregar producto:", error);
+      mensaje.textContent = "❌ No se pudo agregar el producto.";
+    }
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Nuevo Pedido con Login</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      border: 3px solid rgb(255, 0, 255);
+      border-radius: 10px;
+    }
+    input, select, textarea, button {
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 10px;
+      font-size: 16px;
+    }
+    button {
+      background-color: green;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: darkgreen;
+    }
+    #loginSection, #pedidoSection {
+      display: none;
+    }
+    .remove-item-button {
+      background-color: #dc3545;
+      width: auto;
+      padding: 5px 10px;
+      margin-left: 10px;
+    }
+    .remove-item-button:hover {
+      background-color: #c82333;
+    }
+    .product-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .product-item select, .product-item input {
+      flex-grow: 1;
+    }
+    #addProductoBtn {
+      background-color: #007bff;
+      border-radius: 15px;
+    }
+    #addProductoBtn:hover {
+      background-color: #0056b3;
+    }
+    #delete {
+      border-radius: 10px;
+    }
+    #enviarproducto {
+      border-radius: 15px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- 🔐 Login -->
+  <div id="loginSection">
+    <h2>Iniciar Sesión</h2>
+    <input type="email" id="email" placeholder="Correo electrónico" required>
+    <input type="password" id="password" placeholder="Contraseña" required>
+    <button id="loginBtn">Ingresar</button>
+    <p id="loginError" style="color:red;"></p>
+  </div>
+
+  <!-- 📦 Formulario de pedido -->
+  <div id="pedidoSection">
+    <h1>Nuevo Pedido</h1>
+    <form id="pedidoForm">
+      <label for="sucursal">Sucursal:</label>
+      <select id="sucursal" required>
+        <option value="">Seleccione una sucursal</option>
+        <option value="Sucursal KM5">Sucursal KM5</option>
+        <option value="Sucursal KM7">Sucursal KM7</option>
+        <option value="Sucursal KM8">Sucursal KM8</option>
+        <option value="Sucursal GSS">Sucursal GSS</option>
+      </select>
+
+      <h2>Detalles del Pedido</h2>
+      <div id="productosContainer">
+        <div class="product-item">
+          <select class="producto-select" required></select>
+          <input type="number" class="cantidad-input" placeholder="Cantidad" min="1" required>
+          <button id="delete" type="button" class="remove-item-button" style="display:none;">Eliminar</button>
+        </div>
+      </div>
+
+      <label for="comentarios">Comentarios:</label>
+      <textarea id="comentarios" placeholder="Comentarios adicionales (opcional)"></textarea>
+
+      <button id="addProductoBtn" type="button">Añadir otro producto</button>
+      <button id="enviarproducto" type="submit">Enviar Pedido</button>
+    </form>
+
+    <p id="mensaje"></p>
+    <button id="logoutBtn" style="margin-top:20px; background-color:#ee6a6a; border-radius: 15px;">Cerrar Sesión</button>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCr0SM_u0c4aEG_tT_CXWLcvd6alZJT44c",
+      authDomain: "siondata22.firebaseapp.com",
+      projectId: "siondata22",
+      storageBucket: "siondata22.appspot.com",
+      messagingSenderId: "946379205241",
+      appId: "1:946379205241:web:0fe04a6246518451ee42a8",
+      measurementId: "G-EX6YDJYS1N"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const loginSection = document.getElementById('loginSection');
+    const pedidoSection = document.getElementById('pedidoSection');
+    const email = document.getElementById('email');
+    const password = document.getElementById('password');
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const loginError = document.getElementById('loginError');
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        loginSection.style.display = 'none';
+        pedidoSection.style.display = 'block';
+        cargarProductos();
+      } else {
+        loginSection.style.display = 'block';
+        pedidoSection.style.display = 'none';
+      }
+    });
+
+    loginBtn.addEventListener('click', async () => {
+      try {
+        await signInWithEmailAndPassword(auth, email.value, password.value);
+      } catch (error) {
+        loginError.textContent = "❌ " + error.message;
+      }
+    });
+
+    logoutBtn.addEventListener('click', async () => {
+      await signOut(auth);
+    });
+
+    const productosContainer = document.getElementById('productosContainer');
+    const addProductoBtn = document.getElementById('addProductoBtn');
+    const mensaje = document.getElementById('mensaje');
+    const form = document.getElementById('pedidoForm');
+
+    let productosDisponibles = [];
+
+    async function cargarProductos() {
+      const snapshot = await getDocs(collection(db, "productos"));
+      productosDisponibles = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        productosDisponibles.push({ id: doc.id, ...data });
+      });
+      updateProductSelects();
+    }
+
+    function updateProductSelects() {
+      document.querySelectorAll('.producto-select').forEach(select => {
+        const selected = select.value;
+        select.innerHTML = '<option value="">Seleccione un producto</option>';
+        productosDisponibles.forEach(p => {
+          select.innerHTML += `<option value="${p.id}">${p.nombre} - Gs. ${p.precio.toLocaleString()}</option>`;
+        });
+        select.value = selected;
+      });
+    }
+
+    function toggleRemoveButtons() {
+      const items = document.querySelectorAll('.product-item');
+      items.forEach(item => {
+        item.querySelector('.remove-item-button').style.display = items.length > 1 ? 'inline-block' : 'none';
+      });
+    }
+
+    function addProductItem() {
+      const div = document.createElement('div');
+      div.classList.add('product-item');
+      div.innerHTML = `
+        <select class="producto-select" required></select>
+        <input type="number" class="cantidad-input" placeholder="Cantidad" min="1" required>
+        <button type="button" class="remove-item-button">Eliminar</button>
+      `;
+      div.querySelector('.remove-item-button').addEventListener('click', () => {
+        div.remove();
+        toggleRemoveButtons();
+      });
+      productosContainer.appendChild(div);
+      updateProductSelects();
+      toggleRemoveButtons();
+    }
+
+    addProductoBtn.addEventListener('click', addProductItem);
+    toggleRemoveButtons();
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      mensaje.textContent = "";
+      const sucursal = document.getElementById('sucursal').value;
+      const comentarios = document.getElementById('comentarios').value;
+
+      const itemsPedido = [];
+      const items = document.querySelectorAll('.product-item');
+      for (const item of items) {
+        const productoId = item.querySelector('.producto-select').value;
+        const cantidad = parseInt(item.querySelector('.cantidad-input').value);
+        const producto = productosDisponibles.find(p => p.id === productoId);
+        if (!producto || isNaN(cantidad) || cantidad <= 0 || cantidad > producto.stock) {
+          mensaje.textContent = `❌ Verifique los datos del producto.`;
+          return;
+        }
+        itemsPedido.push({ productoId, nombre: producto.nombre, cantidad });
+      }
+
+      try {
+        await addDoc(collection(db, "pedidos"), {
+          fecha: new Date().toISOString(),
+          sucursal,
+          comentarios,
+          productos: itemsPedido
+        });
+        for (const item of itemsPedido) {
+          const ref = doc(db, "productos", item.productoId);
+          const snap = await getDoc(ref);
+          const nuevoStock = (snap.data().stock || 0) - item.cantidad;
+          await updateDoc(ref, { stock: nuevoStock });
+        }
+        mensaje.textContent = "✅ Pedido enviado correctamente.";
+        form.reset();
+        productosContainer.innerHTML = '';
+        addProductItem();
+      } catch (error) {
+        mensaje.textContent = "❌ Error al guardar el pedido.";
+        console.error(error);
+      }
+    });
+
+    addProductItem(); // Inicializar
+  </script>
+</body>
+</html>

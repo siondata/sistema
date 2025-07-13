@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Depósito</title>
+  <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+
+  <button id="logout" style="display:none;">Cerrar sesión</button>
+  <h1>SION S.R.L</h1>
+  <h1>Pedidos Realizados por Sucursal</h1>
+
+  <div id="login-container" style="display:none;">
+    <h2>Iniciar sesión</h2>
+    <input type="email" id="email" placeholder="Correo">
+    <input type="password" id="password" placeholder="Contraseña">
+    <button onclick="login()">Ingresar</button>
+  </div>
+
+  <div id="contenedor"></div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getFirestore, collection, getDocs, doc, getDoc, query, orderBy
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import {
+      getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCr0SM_u0c4aEG_tT_CXWLcvd6alZJT44c",
+      authDomain: "siondata22.firebaseapp.com",
+      projectId: "siondata22",
+      storageBucket: "siondata22.appspot.com",
+      messagingSenderId: "946379205241",
+      appId: "1:946379205241:web:0fe04a6246518451ee42a8"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    const loginContainer = document.getElementById("login-container");
+    const logoutBtn = document.getElementById("logout");
+    const contenedor = document.getElementById("contenedor");
+
+    // Estado de autenticación
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        loginContainer.style.display = "none";
+        logoutBtn.style.display = "inline";
+        cargarPedidos();
+      } else {
+        loginContainer.style.display = "block";
+        logoutBtn.style.display = "none";
+      }
+    });
+
+    // Función de login
+    window.login = async function () {
+      const email = document.getElementById("email").value;
+      const pass = document.getElementById("password").value;
+      try {
+        await signInWithEmailAndPassword(auth, email, pass);
+      } catch (e) {
+        alert("Error de inicio de sesión: " + e.message);
+      }
+    };
+
+    // Cerrar sesión
+    logoutBtn.addEventListener("click", () => {
+      signOut(auth);
+    });
+
+    // Cargar pedidos desde Firestore
+    async function cargarPedidos() {
+      const q = query(collection(db, "pedidos"), orderBy("fecha", "desc"));
+      const pedidosSnapshot = await getDocs(q);
+      for (const docPedido of pedidosSnapshot.docs) {
+        const pedido = docPedido.data();
+        const productos = pedido.productos || [];
+        let total = 0;
+
+        const tablaFilas = await Promise.all(productos.map(async p => {
+          const refProd = doc(db, "productos", p.productoId);
+          const snap = await getDoc(refProd);
+          const precio = snap.exists() ? (snap.data().precio || 0) : 0;
+          const subtotal = precio * p.cantidad;
+          total += subtotal;
+          return `
+            <tr>
+              <td>${p.nombre}</td>
+              <td>${p.cantidad}</td>
+              <td>Gs. ${precio.toLocaleString()}</td>
+              <td>Gs. ${subtotal.toLocaleString()}</td>
+            </tr>
+          `;
+        }));
+
+        const div = document.createElement("div");
+        div.className = "pedido";
+        div.innerHTML = `
+          <h3>${pedido.sucursal} - ${new Date(pedido.fecha).toLocaleString()}</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Precio Unitario</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tablaFilas.join("")}
+            </tbody>
+          </table>
+          <div class="total">Total estimado: <strong>Gs. ${total.toLocaleString()}</strong></div>
+        `;
+        contenedor.appendChild(div);
+      }
+    }
+  </script>
+
+</body>
+</html>
