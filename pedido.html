@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Nuevo Pedido con Login</title>
+  <title>Nuevo Pedido</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -26,9 +26,6 @@
     }
     button:hover {
       background-color: darkgreen;
-    }
-    #loginSection, #pedidoSection {
-      display: none;
     }
     .remove-item-button {
       background-color: #dc3545;
@@ -66,17 +63,8 @@
 
 <body>
 
-  <!-- 🔐 Login -->
-  <div id="loginSection">
-    <h2>Iniciar Sesión</h2>
-    <input type="email" id="email" placeholder="Correo electrónico" required>
-    <input type="password" id="password" placeholder="Contraseña" required>
-    <button id="loginBtn">Ingresar</button>
-    <p id="loginError" style="color:red;"></p>
-  </div>
-
   <!-- 📦 Formulario de pedido -->
-  <div id="pedidoSection">
+  <div id="pedidoSection" style="display: block;">
     <h1>Nuevo Pedido</h1>
     <form id="pedidoForm">
       <label for="sucursal">Sucursal:</label>
@@ -105,12 +93,10 @@
     </form>
 
     <p id="mensaje"></p>
-    <button id="logoutBtn" style="margin-top:20px; background-color:#ee6a6a; border-radius: 15px;">Cerrar Sesión</button>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -124,39 +110,7 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
     const db = getFirestore(app);
-
-    const loginSection = document.getElementById('loginSection');
-    const pedidoSection = document.getElementById('pedidoSection');
-    const email = document.getElementById('email');
-    const password = document.getElementById('password');
-    const loginBtn = document.getElementById('loginBtn');
-    const logoutBtn = document.getElementById('logoutBtn');
-    const loginError = document.getElementById('loginError');
-
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        loginSection.style.display = 'none';
-        pedidoSection.style.display = 'block';
-        cargarProductos();
-      } else {
-        loginSection.style.display = 'block';
-        pedidoSection.style.display = 'none';
-      }
-    });
-
-    loginBtn.addEventListener('click', async () => {
-      try {
-        await signInWithEmailAndPassword(auth, email.value, password.value);
-      } catch (error) {
-        loginError.textContent = "❌ " + error.message;
-      }
-    });
-
-    logoutBtn.addEventListener('click', async () => {
-      await signOut(auth);
-    });
 
     const productosContainer = document.getElementById('productosContainer');
     const addProductoBtn = document.getElementById('addProductoBtn');
@@ -170,7 +124,9 @@
       productosDisponibles = [];
       snapshot.forEach(doc => {
         const data = doc.data();
-        productosDisponibles.push({ id: doc.id, ...data });
+        if (data.stock > 0) {
+          productosDisponibles.push({ id: doc.id, ...data });
+        }
       });
       updateProductSelects();
     }
@@ -180,7 +136,7 @@
         const selected = select.value;
         select.innerHTML = '<option value="">Seleccione un producto</option>';
         productosDisponibles.forEach(p => {
-          select.innerHTML += `<option value="${p.id}">${p.nombre} - Gs. ${p.precio.toLocaleString()}</option>`;
+          select.innerHTML += `<option value="${p.id}">${p.nombre} - Stock: ${p.stock} - Gs. ${p.precio.toLocaleString()}</option>`;
         });
         select.value = selected;
       });
@@ -220,6 +176,7 @@
       const comentarios = document.getElementById('comentarios').value;
 
       const itemsPedido = [];
+      const productosUsados = new Set();
       const items = document.querySelectorAll('.product-item');
       for (const item of items) {
         const productoId = item.querySelector('.producto-select').value;
@@ -229,6 +186,11 @@
           mensaje.textContent = `❌ Verifique los datos del producto.`;
           return;
         }
+        if (productosUsados.has(productoId)) {
+          mensaje.textContent = "❌ No se puede repetir el mismo producto.";
+          return;
+        }
+        productosUsados.add(productoId);
         itemsPedido.push({ productoId, nombre: producto.nombre, cantidad });
       }
 
@@ -249,13 +211,17 @@
         form.reset();
         productosContainer.innerHTML = '';
         addProductItem();
+        cargarProductos(); // Refrescar stock
       } catch (error) {
         mensaje.textContent = "❌ Error al guardar el pedido.";
         console.error(error);
       }
     });
 
+    cargarProductos();
     addProductItem(); // Inicializar
   </script>
 </body>
+</html>
+
 </html>
