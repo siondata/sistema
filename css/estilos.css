@@ -14,6 +14,18 @@ body {
   min-height: 100vh; /* Full viewport height */
   box-sizing: border-box;
 }
+.logo {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 50px;       /* Tamaño más pequeño */
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+}
+
 
 /* Header (H1) Styling */
 h1 {
@@ -31,21 +43,6 @@ h2 {
   font-size: 1.5em;
 }
 
-nav {
-  position: absolute;           /* Posicionamiento libre */
-  top: 20px;                    /* A 20px del borde superior */
-  left: 20%;                    /* Punto central horizontal */
-  transform: translateX(-50%);  /* Mueve el logo -50% de su ancho para centrarlo */
-  z-index: 1000;                /* Que esté por encima de otros elementos */
-}
-
-/* Estilo del logo */
-nav img {
-  width: 80px;
-  height: auto;
-  border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
 
 /* Button Styling */
 button {
