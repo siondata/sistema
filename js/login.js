@@ -1,38 +1,36 @@
+// js/login.js
+
+import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+import { auth } from './firebase-config.js';
+
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('login-form');
   const mensaje = document.getElementById('mensaje');
 
-  if (!form) {
-    console.error("Formulario con id='login-form' no encontrado.");
-    return;
-  }
-
-  form.addEventListener('submit', (e) => {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
-
+    
     const email = document.getElementById('email')?.value.trim();
     const password = document.getElementById('password')?.value;
 
-    // Validación básica
     if (!email || !password) {
-      mensaje.textContent = "Todos los campos son obligatorios.";
+      mensaje.textContent = "Completa todos los campos.";
       mensaje.style.color = "red";
       return;
     }
 
-    // Simulación de autenticación (ejemplo)
-    if (email === "admin@sion.com" && password === "1234") {
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
       mensaje.textContent = "Inicio de sesión exitoso.";
       mensaje.style.color = "green";
-
-      // Redireccionar luego de 1 segundo
       setTimeout(() => {
         window.location.href = "dashboard.html";
       }, 1000);
-    } else {
-      mensaje.textContent = "Correo o contraseña incorrectos.";
+    } catch (error) {
+      mensaje.textContent = "Error: " + error.message;
       mensaje.style.color = "red";
     }
   });
 });
+
 
