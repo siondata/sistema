@@ -30,20 +30,20 @@ h2 {
   font-size: 1.5em;
 }
 
-/* Navigation (Logo Container) Styling */
 nav {
-  position: absolute; /* Position absolutely to place it independently */
-  top: 20px; /* 20px from the top */
-  left: 20px; /* 20px from the left */
-  z-index: 1000; /* Ensure it stays on top of other elements */
+  position: absolute;           /* Posicionamiento libre */
+  top: 20px;                    /* A 20px del borde superior */
+  left: 50%;                    /* Punto central horizontal */
+  transform: translateX(-50%);  /* Mueve el logo -50% de su ancho para centrarlo */
+  z-index: 1000;                /* Que esté por encima de otros elementos */
 }
 
+/* Estilo del logo */
 nav img {
-  width: 80px; /* Set a fixed width for the logo */
-  justify-content: center;
-  height: auto; /* Maintain aspect ratio */
-  border-radius: 8px; /* Slightly rounded corners for the logo */
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Subtle shadow for the logo */
+  width: 80px;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 /* Button Styling */
