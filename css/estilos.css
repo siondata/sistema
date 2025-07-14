@@ -19,7 +19,7 @@ body {
   top: 20px;
   left: 50%;
   transform: translateX(-50%);
-  width: 70px;       /* Tamaño más pequeño */
+  width: 100px;       /* Tamaño más pequeño */
   height: auto;
   border-radius: 8px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
