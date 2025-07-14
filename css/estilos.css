@@ -40,7 +40,7 @@ nav {
 
 nav img {
   width: 80px; /* Set a fixed width for the logo */
-  justify-content: center/
+  justify-content: center;
   height: auto; /* Maintain aspect ratio */
   border-radius: 8px; /* Slightly rounded corners for the logo */
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Subtle shadow for the logo */
