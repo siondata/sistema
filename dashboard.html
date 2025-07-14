@@ -21,17 +21,14 @@
     const userInfo = document.getElementById("user-info");
     const logoutBtn = document.getElementById("logout-btn");
 
-    // Verificar si el usuario está autenticado
     onAuthStateChanged(auth, (user) => {
       if (user) {
         userInfo.textContent = `Sesión iniciada como: ${user.email}`;
       } else {
-        // Si no está logueado, redirigir al login
         window.location.href = "index.html";
       }
     });
 
-    // Cerrar sesión
     logoutBtn.addEventListener("click", async () => {
       await signOut(auth);
       window.location.href = "index.html";
@@ -39,3 +36,4 @@
   </script>
 </body>
 </html>
+
