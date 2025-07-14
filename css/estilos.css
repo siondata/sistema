@@ -34,7 +34,7 @@ h2 {
 nav {
   position: absolute;           /* Posicionamiento libre */
   top: 20px;                    /* A 20px del borde superior */
-  left: 50%;                    /* Punto central horizontal */
+  left: 20%;                    /* Punto central horizontal */
   transform: translateX(-50%);  /* Mueve el logo -50% de su ancho para centrarlo */
   z-index: 1000;                /* Que esté por encima de otros elementos */
 }
