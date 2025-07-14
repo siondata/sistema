@@ -1,27 +1,38 @@
-// js/login.js
+document.addEventListener('DOMContentLoaded', () => {
+  const form = document.getElementById('login-form');
+  const mensaje = document.getElementById('mensaje');
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { firebaseConfig } from "./firebase-config.js";
-
-// Inicializar Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-
-// Manejar login
-document.getElementById("login-form").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value.trim();
-  const mensaje = document.getElementById("mensaje");
-
-  try {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
-    mensaje.textContent = "Inicio de sesión exitoso";
-    // Redirigir al dashboard
-    window.location.href = "./dashboard.html";
-  } catch (error) {
-    mensaje.textContent = "Error: " + error.message;
+  if (!form) {
+    console.error("Formulario con id='login-form' no encontrado.");
+    return;
   }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    const email = document.getElementById('email')?.value.trim();
+    const password = document.getElementById('password')?.value;
+
+    // Validación básica
+    if (!email || !password) {
+      mensaje.textContent = "Todos los campos son obligatorios.";
+      mensaje.style.color = "red";
+      return;
+    }
+
+    // Simulación de autenticación (ejemplo)
+    if (email === "admin@sion.com" && password === "1234") {
+      mensaje.textContent = "Inicio de sesión exitoso.";
+      mensaje.style.color = "green";
+
+      // Redireccionar luego de 1 segundo
+      setTimeout(() => {
+        window.location.href = "dashboard.html";
+      }, 1000);
+    } else {
+      mensaje.textContent = "Correo o contraseña incorrectos.";
+      mensaje.style.color = "red";
+    }
+  });
 });
+
