@@ -1,39 +1,23 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Dashboard - SION S.R.L</title>
+  <meta charset="UTF-8">
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="css/estilos.css">
 </head>
 <body>
-  <h1>Bienvenido al panel de pedidos</h1>
-  <p id="user-info"></p>
-  <button id="logout-btn">Cerrar sesión</button>
+  <h1>Panel Principal</h1>
+  <h2>Sion S.R.L.</h2>
+  <nav>
+    <img src="C:\Users\josia\Desktop\tarea\img\logo.png" alt="logo sion">
+  </nav>
+  <button onclick="location.href='pedido.html'">📝 Hacer Pedido</button>
+  <button onclick="location.href='deposito.html'">📦 Ver Depósito</button>
+  <button onclick="location.href='totales.html'">💰 Ver Totales</button>
+  <button onclick="location.href='productos.html'">📦 Ver Productos</button>
+  <button id="logoutBtn">Cerrar Sesión</button>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { firebaseConfig } from "./js/firebase-config.js";
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-
-    const userInfo = document.getElementById("user-info");
-    const logoutBtn = document.getElementById("logout-btn");
-
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        userInfo.textContent = `Sesión iniciada como: ${user.email}`;
-      } else {
-        window.location.href = "index.html";
-      }
-    });
-
-    logoutBtn.addEventListener("click", async () => {
-      await signOut(auth);
-      window.location.href = "index.html";
-    });
-  </script>
+  <script type="module" src="js/auth.js"></script>
 </body>
 </html>
 
