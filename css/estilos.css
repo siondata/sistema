@@ -22,14 +22,14 @@ body {
 }
 
 /* LOGO */
-.logo {
+.logo-img {
   display: flex;
   justify-content: center;
   margin-top: 20px;
   margin-bottom: 20px;
 }
 
-.logo img {
+.logo-img img {
   height: 100px;
   width: auto;
   border-radius: 8px;
@@ -160,7 +160,7 @@ button:active {
     padding: 12px;
   }
 
-  .logo img {
+  .logo-img {
     height: 80px;
   }
 
@@ -180,13 +180,13 @@ button:active {
   }
 
  @media (max-width: 768px) {
-  .logo img {
+  .logo-img {
     height: 70px;
   }
 }
 
 @media (max-width: 480px) {
-  .logo img {
+  .logo-img {
     height: 50px;
   }
 }
