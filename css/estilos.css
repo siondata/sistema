@@ -179,8 +179,15 @@ button:active {
     padding: 10px 15px;
   }
 
+ @media (max-width: 768px) {
   .logo img {
     height: 70px;
+  }
+}
+
+@media (max-width: 480px) {
+  .logo img {
+    height: 50px;
   }
 }
 
