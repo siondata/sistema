@@ -65,6 +65,7 @@
   <h1>Nuevo Pedido</h1>
 
   <form id="pedidoForm">
+   <form id="pedidoForm">
     <label for="sucursal">Sucursal:</label>
     <select id="sucursal" required>
       <option value="">Seleccione una sucursal</option>
@@ -74,16 +75,19 @@
       <option value="Sucursal GSS">Sucursal GSS</option>
     </select>
 
-    <h2>Detalles del Pedido</h2>
-
+    <h2>Productos</h2>
+    
+    <!-- Datalist para autocompletar productos -->
     <datalist id="productosList"></datalist>
+
     <div id="productosContainer"></div>
 
-    <label for="comentarios">Comentarios:</label>
-    <textarea id="comentarios" placeholder="Comentarios adicionales (opcional)"></textarea>
+    <button id="addProductoBtn" type="button">Añadir otro producto</button>
 
-    <button type="button" id="addProductoBtn">➕ Añadir Producto</button>
-    <button type="submit" id="enviarBtn">✅ Enviar Pedido</button>
+    <label for="comentarios">Comentarios:</label>
+    <textarea id="comentarios" placeholder="Comentarios adicionales (opcional)" rows="3"></textarea>
+
+    <button id="enviarproducto" type="submit">Enviar Pedido</button>
   </form>
 
   <p id="mensaje"></p>
