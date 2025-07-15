@@ -62,8 +62,6 @@
 </head>
 
 <body>
-
-  <!-- 📦 Formulario de pedido -->
   <div id="pedidoSection" style="display: block;">
     <h1>Nuevo Pedido</h1>
     <form id="pedidoForm">
@@ -97,9 +95,8 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCr0SM_u0c4aEG_tT_CXWLcvd6alZJT44c",
@@ -112,17 +109,8 @@ import { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc } fro
     };
 
     const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    window.location.href = "index.html";
-  } else {
-    cargarProductos();
-    addProductItem(); // solo si está logueado
-  }
-});
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
     const productosContainer = document.getElementById('productosContainer');
     const addProductoBtn = document.getElementById('addProductoBtn');
@@ -130,6 +118,16 @@ onAuthStateChanged(auth, (user) => {
     const form = document.getElementById('pedidoForm');
 
     let productosDisponibles = [];
+
+    // ✅ Proteger la página con verificación de sesión
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = "index.html"; // 🔒 Redirige si no está logueado
+      } else {
+        cargarProductos();
+        addProductItem(); // Solo se ejecuta si está logueado
+      }
+    });
 
     async function cargarProductos() {
       const snapshot = await getDocs(collection(db, "productos"));
@@ -223,17 +221,13 @@ onAuthStateChanged(auth, (user) => {
         form.reset();
         productosContainer.innerHTML = '';
         addProductItem();
-        cargarProductos(); // Refrescar stock
+        cargarProductos();
       } catch (error) {
         mensaje.textContent = "❌ Error al guardar el pedido.";
         console.error(error);
       }
     });
-
-    cargarProductos();
-    addProductItem(); // Inicializar
   </script>
 </body>
 </html>
 
-</html>
