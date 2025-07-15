@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Nuevo Pedido</title>
   <style>
     body {
@@ -9,34 +9,14 @@
       max-width: 800px;
       margin: 50px auto;
       padding: 20px;
-      border: 3px solid rgb(255, 0, 255);
+      border: 3px solid #00f;
       border-radius: 10px;
     }
     input, select, textarea, button {
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 10px;
       font-size: 16px;
-    }
-    button {
-      cursor: pointer;
-      border: none;
-      border-radius: 8px;
-      padding: 10px 15px;
-      background-color: #3498db;
-      color: white;
-      transition: background-color 0.3s ease;
-    }
-    button:hover {
-      background-color: #2980b9;
-    }
-    .remove-item-button {
-      background-color: #dc3545;
-      padding: 5px 10px;
-      border-radius: 8px;
-      color: white;
-      font-weight: bold;
-      margin-left: 10px;
-    }
-    .remove-item-button:hover {
-      background-color: #c82333;
     }
     .product-item {
       display: flex;
@@ -44,37 +24,46 @@
       gap: 10px;
       margin-bottom: 10px;
     }
-    .product-item input.producto-input {
-      flex: 2;
-      padding: 8px;
+    .product-item input {
+      flex: 1;
     }
-    .product-item input.cantidad-input {
-      width: 80px;
-      padding: 8px;
+    .remove-item-button {
+      background-color: #dc3545;
+      color: white;
+      padding: 6px 12px;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
     }
-    #addProductoBtn {
-      margin-top: 15px;
-      border-radius: 15px;
-      width: 100%;
+    .remove-item-button:hover {
+      background-color: #c82333;
     }
-    #enviarproducto {
-      margin-top: 20px;
-      border-radius: 15px;
-      width: 100%;
+    button {
       background-color: green;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
     }
-    #enviarproducto:hover {
+    button:hover {
       background-color: darkgreen;
     }
+    #addProductoBtn {
+      background-color: #007bff;
+    }
+    #addProductoBtn:hover {
+      background-color: #0056b3;
+    }
     #mensaje {
-      margin-top: 15px;
       font-weight: bold;
+      margin-top: 15px;
     }
   </style>
 </head>
 <body>
 
   <h1>Nuevo Pedido</h1>
+
   <form id="pedidoForm">
     <label for="sucursal">Sucursal:</label>
     <select id="sucursal" required>
@@ -85,19 +74,16 @@
       <option value="Sucursal GSS">Sucursal GSS</option>
     </select>
 
-    <h2>Productos</h2>
-    
-    <!-- Datalist para autocompletar productos -->
-    <datalist id="productosList"></datalist>
+    <h2>Detalles del Pedido</h2>
 
+    <datalist id="productosList"></datalist>
     <div id="productosContainer"></div>
 
-    <button id="addProductoBtn" type="button">Añadir otro producto</button>
-
     <label for="comentarios">Comentarios:</label>
-    <textarea id="comentarios" placeholder="Comentarios adicionales (opcional)" rows="3"></textarea>
+    <textarea id="comentarios" placeholder="Comentarios adicionales (opcional)"></textarea>
 
-    <button id="enviarproducto" type="submit">Enviar Pedido</button>
+    <button type="button" id="addProductoBtn">➕ Añadir Producto</button>
+    <button type="submit" id="enviarBtn">✅ Enviar Pedido</button>
   </form>
 
   <p id="mensaje"></p>
@@ -107,7 +93,6 @@
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // Tu configuración Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyCr0SM_u0c4aEG_tT_CXWLcvd6alZJT44c",
       authDomain: "siondata22.firebaseapp.com",
@@ -122,25 +107,21 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const productosContainer = document.getElementById('productosContainer');
-    const addProductoBtn = document.getElementById('addProductoBtn');
-    const mensaje = document.getElementById('mensaje');
-    const form = document.getElementById('pedidoForm');
-    const datalist = document.getElementById('productosList');
+    const datalist = document.getElementById("productosList");
+    const productosContainer = document.getElementById("productosContainer");
+    const addProductoBtn = document.getElementById("addProductoBtn");
+    const form = document.getElementById("pedidoForm");
+    const mensaje = document.getElementById("mensaje");
 
     let productosDisponibles = [];
 
-    // Verificar usuario logueado
-    onAuthStateChanged(auth, user => {
+    // Redirección si no está autenticado
+    onAuthStateChanged(auth, (user) => {
       if (!user) {
         window.location.href = "index.html";
-      } else {
-        cargarProductos();
-        addProductItem();
       }
     });
 
-    // Cargar productos desde Firestore y actualizar datalist
     async function cargarProductos() {
       productosDisponibles = [];
       datalist.innerHTML = "";
@@ -150,82 +131,56 @@
         if (data.stock > 0) {
           productosDisponibles.push({ id: docSnap.id, ...data });
           const option = document.createElement("option");
-          option.value = `${data.nombre} - Stock: ${data.stock} - Gs. ${data.precio.toLocaleString()}`;
-          option.dataset.id = docSnap.id;
+          option.value = data.nombre;
           datalist.appendChild(option);
         }
       });
     }
 
-    // Añadir nuevo producto al formulario
     function addProductItem() {
-      const div = document.createElement('div');
-      div.classList.add('product-item');
+      const div = document.createElement("div");
+      div.classList.add("product-item");
       div.innerHTML = `
-        <input class="producto-input" list="productosList" placeholder="Buscar producto" required autocomplete="off" />
-        <input type="number" class="cantidad-input" placeholder="Cantidad" min="1" required />
-        <button type="button" class="remove-item-button" title="Eliminar producto">X</button>
+        <input type="text" class="producto-input" list="productosList" placeholder="Producto" required>
+        <input type="number" class="cantidad-input" placeholder="Cantidad" min="1" required>
+        <button type="button" class="remove-item-button">🗑️</button>
       `;
-      const btnRemove = div.querySelector('.remove-item-button');
-      btnRemove.addEventListener('click', () => {
+      div.querySelector(".remove-item-button").addEventListener("click", () => {
         div.remove();
-        toggleRemoveButtons();
       });
       productosContainer.appendChild(div);
-      toggleRemoveButtons();
     }
 
-    // Mostrar/ocultar botón eliminar según cantidad de productos
-    function toggleRemoveButtons() {
-      const items = document.querySelectorAll('.product-item');
-      items.forEach(item => {
-        const btn = item.querySelector('.remove-item-button');
-        btn.style.display = items.length > 1 ? 'inline-block' : 'none';
-      });
-    }
-
-    addProductoBtn.addEventListener('click', addProductItem);
-    toggleRemoveButtons();
-
-    form.addEventListener('submit', async e => {
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
       mensaje.textContent = "";
 
-      const sucursal = document.getElementById('sucursal').value;
-      const comentarios = document.getElementById('comentarios').value;
-
-      const items = document.querySelectorAll('.product-item');
-      const productosUsados = new Set();
+      const sucursal = document.getElementById("sucursal").value;
+      const comentarios = document.getElementById("comentarios").value;
       const itemsPedido = [];
+      const productosUsados = new Set();
+      const items = document.querySelectorAll(".product-item");
 
       for (const item of items) {
-        const inputText = item.querySelector('.producto-input').value.trim();
-        const cantidad = parseInt(item.querySelector('.cantidad-input').value);
+        const nombre = item.querySelector(".producto-input").value.trim();
+        const cantidad = parseInt(item.querySelector(".cantidad-input").value);
+        const producto = productosDisponibles.find(p => p.nombre.toLowerCase() === nombre.toLowerCase());
 
-        // Buscar producto que coincida por nombre al inicio del texto
-        const producto = productosDisponibles.find(p => inputText.startsWith(p.nombre));
-        if (!producto) {
-          mensaje.textContent = `❌ Producto "${inputText}" no válido.`;
+        if (!producto || isNaN(cantidad) || cantidad <= 0 || cantidad > producto.stock) {
+          mensaje.textContent = "❌ Verifique los productos ingresados.";
           return;
         }
-        if (isNaN(cantidad) || cantidad < 1) {
-          mensaje.textContent = `❌ Cantidad inválida para "${producto.nombre}".`;
-          return;
-        }
-        if (cantidad > producto.stock) {
-          mensaje.textContent = `❌ La cantidad para "${producto.nombre}" supera el stock disponible (${producto.stock}).`;
-          return;
-        }
+
         if (productosUsados.has(producto.id)) {
-          mensaje.textContent = `❌ El producto "${producto.nombre}" está repetido.`;
+          mensaje.textContent = "❌ No se puede repetir el mismo producto.";
           return;
         }
+
         productosUsados.add(producto.id);
         itemsPedido.push({ productoId: producto.id, nombre: producto.nombre, cantidad });
       }
 
       try {
-        // Agregar pedido a Firestore
         await addDoc(collection(db, "pedidos"), {
           fecha: new Date().toISOString(),
           sucursal,
@@ -233,7 +188,6 @@
           productos: itemsPedido
         });
 
-        // Actualizar stock en Firestore
         for (const item of itemsPedido) {
           const ref = doc(db, "productos", item.productoId);
           const snap = await getDoc(ref);
@@ -241,23 +195,24 @@
           await updateDoc(ref, { stock: nuevoStock });
         }
 
-        mensaje.style.color = "green";
         mensaje.textContent = "✅ Pedido enviado correctamente.";
-
-        // Limpiar formulario para nuevo pedido
         form.reset();
         productosContainer.innerHTML = "";
         addProductItem();
         cargarProductos();
-
       } catch (error) {
-        mensaje.style.color = "red";
+        console.error("Error al enviar pedido:", error);
         mensaje.textContent = "❌ Error al guardar el pedido.";
-        console.error(error);
       }
     });
+
+    addProductoBtn.addEventListener("click", addProductItem);
+
+    cargarProductos();
+    addProductItem();
   </script>
 
 </body>
 </html>
+
 
