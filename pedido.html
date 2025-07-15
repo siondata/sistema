@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Nuevo Pedido</title>
   <style>
     body {
@@ -13,24 +13,26 @@
       border-radius: 10px;
     }
     input, select, textarea, button {
-      width: 100%;
-      margin-bottom: 10px;
-      padding: 10px;
       font-size: 16px;
     }
     button {
-      background-color: green;
-      color: white;
-      border: none;
       cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 15px;
+      background-color: #3498db;
+      color: white;
+      transition: background-color 0.3s ease;
     }
     button:hover {
-      background-color: darkgreen;
+      background-color: #2980b9;
     }
     .remove-item-button {
       background-color: #dc3545;
-      width: auto;
       padding: 5px 10px;
+      border-radius: 8px;
+      color: white;
+      font-weight: bold;
       margin-left: 10px;
     }
     .remove-item-button:hover {
@@ -42,62 +44,70 @@
       gap: 10px;
       margin-bottom: 10px;
     }
-    .product-item select, .product-item input {
-      flex-grow: 1;
+    .product-item input.producto-input {
+      flex: 2;
+      padding: 8px;
+    }
+    .product-item input.cantidad-input {
+      width: 80px;
+      padding: 8px;
     }
     #addProductoBtn {
-      background-color: #007bff;
+      margin-top: 15px;
       border-radius: 15px;
-    }
-    #addProductoBtn:hover {
-      background-color: #0056b3;
-    }
-    #delete {
-      border-radius: 10px;
+      width: 100%;
     }
     #enviarproducto {
+      margin-top: 20px;
       border-radius: 15px;
+      width: 100%;
+      background-color: green;
+    }
+    #enviarproducto:hover {
+      background-color: darkgreen;
+    }
+    #mensaje {
+      margin-top: 15px;
+      font-weight: bold;
     }
   </style>
 </head>
-
 <body>
-  <div id="pedidoSection" style="display: block;">
-    <h1>Nuevo Pedido</h1>
-    <form id="pedidoForm">
-      <label for="sucursal">Sucursal:</label>
-      <select id="sucursal" required>
-        <option value="">Seleccione una sucursal</option>
-        <option value="Sucursal KM5">Sucursal KM5</option>
-        <option value="Sucursal KM7">Sucursal KM7</option>
-        <option value="Sucursal KM8">Sucursal KM8</option>
-        <option value="Sucursal GSS">Sucursal GSS</option>
-      </select>
 
-      <h2>Detalles del Pedido</h2>
-      <div id="productosContainer">
-        <div class="product-item">
-          <select class="producto-select" required></select>
-          <input type="number" class="cantidad-input" placeholder="Cantidad" min="1" required>
-          <button id="delete" type="button" class="remove-item-button" style="display:none;">Eliminar</button>
-        </div>
-      </div>
+  <h1>Nuevo Pedido</h1>
+  <form id="pedidoForm">
+    <label for="sucursal">Sucursal:</label>
+    <select id="sucursal" required>
+      <option value="">Seleccione una sucursal</option>
+      <option value="Sucursal KM5">Sucursal KM5</option>
+      <option value="Sucursal KM7">Sucursal KM7</option>
+      <option value="Sucursal KM8">Sucursal KM8</option>
+      <option value="Sucursal GSS">Sucursal GSS</option>
+    </select>
 
-      <label for="comentarios">Comentarios:</label>
-      <textarea id="comentarios" placeholder="Comentarios adicionales (opcional)"></textarea>
+    <h2>Productos</h2>
+    
+    <!-- Datalist para autocompletar productos -->
+    <datalist id="productosList"></datalist>
 
-      <button id="addProductoBtn" type="button">Añadir otro producto</button>
-      <button id="enviarproducto" type="submit">Enviar Pedido</button>
-    </form>
+    <div id="productosContainer"></div>
 
-    <p id="mensaje"></p>
-  </div>
+    <button id="addProductoBtn" type="button">Añadir otro producto</button>
+
+    <label for="comentarios">Comentarios:</label>
+    <textarea id="comentarios" placeholder="Comentarios adicionales (opcional)" rows="3"></textarea>
+
+    <button id="enviarproducto" type="submit">Enviar Pedido</button>
+  </form>
+
+  <p id="mensaje"></p>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+    // Tu configuración Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyCr0SM_u0c4aEG_tT_CXWLcvd6alZJT44c",
       authDomain: "siondata22.firebaseapp.com",
@@ -116,118 +126,138 @@
     const addProductoBtn = document.getElementById('addProductoBtn');
     const mensaje = document.getElementById('mensaje');
     const form = document.getElementById('pedidoForm');
+    const datalist = document.getElementById('productosList');
 
     let productosDisponibles = [];
 
-    // ✅ Proteger la página con verificación de sesión
-    onAuthStateChanged(auth, (user) => {
+    // Verificar usuario logueado
+    onAuthStateChanged(auth, user => {
       if (!user) {
-        window.location.href = "index.html"; // 🔒 Redirige si no está logueado
+        window.location.href = "index.html";
       } else {
         cargarProductos();
-        addProductItem(); // Solo se ejecuta si está logueado
+        addProductItem();
       }
     });
 
+    // Cargar productos desde Firestore y actualizar datalist
     async function cargarProductos() {
-      const snapshot = await getDocs(collection(db, "productos"));
       productosDisponibles = [];
-      snapshot.forEach(doc => {
-        const data = doc.data();
+      datalist.innerHTML = "";
+      const snapshot = await getDocs(collection(db, "productos"));
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
         if (data.stock > 0) {
-          productosDisponibles.push({ id: doc.id, ...data });
+          productosDisponibles.push({ id: docSnap.id, ...data });
+          const option = document.createElement("option");
+          option.value = `${data.nombre} - Stock: ${data.stock} - Gs. ${data.precio.toLocaleString()}`;
+          option.dataset.id = docSnap.id;
+          datalist.appendChild(option);
         }
       });
-      updateProductSelects();
     }
 
-    function updateProductSelects() {
-      document.querySelectorAll('.producto-select').forEach(select => {
-        const selected = select.value;
-        select.innerHTML = '<option value="">Seleccione un producto</option>';
-        productosDisponibles.forEach(p => {
-          select.innerHTML += `<option value="${p.id}">${p.nombre} - Stock: ${p.stock} - Gs. ${p.precio.toLocaleString()}</option>`;
-        });
-        select.value = selected;
-      });
-    }
-
-    function toggleRemoveButtons() {
-      const items = document.querySelectorAll('.product-item');
-      items.forEach(item => {
-        item.querySelector('.remove-item-button').style.display = items.length > 1 ? 'inline-block' : 'none';
-      });
-    }
-
+    // Añadir nuevo producto al formulario
     function addProductItem() {
       const div = document.createElement('div');
       div.classList.add('product-item');
       div.innerHTML = `
-        <select class="producto-select" required></select>
-        <input type="number" class="cantidad-input" placeholder="Cantidad" min="1" required>
-        <button type="button" class="remove-item-button">Eliminar</button>
+        <input class="producto-input" list="productosList" placeholder="Buscar producto" required autocomplete="off" />
+        <input type="number" class="cantidad-input" placeholder="Cantidad" min="1" required />
+        <button type="button" class="remove-item-button" title="Eliminar producto">X</button>
       `;
-      div.querySelector('.remove-item-button').addEventListener('click', () => {
+      const btnRemove = div.querySelector('.remove-item-button');
+      btnRemove.addEventListener('click', () => {
         div.remove();
         toggleRemoveButtons();
       });
       productosContainer.appendChild(div);
-      updateProductSelects();
       toggleRemoveButtons();
+    }
+
+    // Mostrar/ocultar botón eliminar según cantidad de productos
+    function toggleRemoveButtons() {
+      const items = document.querySelectorAll('.product-item');
+      items.forEach(item => {
+        const btn = item.querySelector('.remove-item-button');
+        btn.style.display = items.length > 1 ? 'inline-block' : 'none';
+      });
     }
 
     addProductoBtn.addEventListener('click', addProductItem);
     toggleRemoveButtons();
 
-    form.addEventListener('submit', async (e) => {
+    form.addEventListener('submit', async e => {
       e.preventDefault();
       mensaje.textContent = "";
+
       const sucursal = document.getElementById('sucursal').value;
       const comentarios = document.getElementById('comentarios').value;
 
-      const itemsPedido = [];
-      const productosUsados = new Set();
       const items = document.querySelectorAll('.product-item');
+      const productosUsados = new Set();
+      const itemsPedido = [];
+
       for (const item of items) {
-        const productoId = item.querySelector('.producto-select').value;
+        const inputText = item.querySelector('.producto-input').value.trim();
         const cantidad = parseInt(item.querySelector('.cantidad-input').value);
-        const producto = productosDisponibles.find(p => p.id === productoId);
-        if (!producto || isNaN(cantidad) || cantidad <= 0 || cantidad > producto.stock) {
-          mensaje.textContent = `❌ Verifique los datos del producto.`;
+
+        // Buscar producto que coincida por nombre al inicio del texto
+        const producto = productosDisponibles.find(p => inputText.startsWith(p.nombre));
+        if (!producto) {
+          mensaje.textContent = `❌ Producto "${inputText}" no válido.`;
           return;
         }
-        if (productosUsados.has(productoId)) {
-          mensaje.textContent = "❌ No se puede repetir el mismo producto.";
+        if (isNaN(cantidad) || cantidad < 1) {
+          mensaje.textContent = `❌ Cantidad inválida para "${producto.nombre}".`;
           return;
         }
-        productosUsados.add(productoId);
-        itemsPedido.push({ productoId, nombre: producto.nombre, cantidad });
+        if (cantidad > producto.stock) {
+          mensaje.textContent = `❌ La cantidad para "${producto.nombre}" supera el stock disponible (${producto.stock}).`;
+          return;
+        }
+        if (productosUsados.has(producto.id)) {
+          mensaje.textContent = `❌ El producto "${producto.nombre}" está repetido.`;
+          return;
+        }
+        productosUsados.add(producto.id);
+        itemsPedido.push({ productoId: producto.id, nombre: producto.nombre, cantidad });
       }
 
       try {
+        // Agregar pedido a Firestore
         await addDoc(collection(db, "pedidos"), {
           fecha: new Date().toISOString(),
           sucursal,
           comentarios,
           productos: itemsPedido
         });
+
+        // Actualizar stock en Firestore
         for (const item of itemsPedido) {
           const ref = doc(db, "productos", item.productoId);
           const snap = await getDoc(ref);
           const nuevoStock = (snap.data().stock || 0) - item.cantidad;
           await updateDoc(ref, { stock: nuevoStock });
         }
+
+        mensaje.style.color = "green";
         mensaje.textContent = "✅ Pedido enviado correctamente.";
+
+        // Limpiar formulario para nuevo pedido
         form.reset();
-        productosContainer.innerHTML = '';
+        productosContainer.innerHTML = "";
         addProductItem();
         cargarProductos();
+
       } catch (error) {
+        mensaje.style.color = "red";
         mensaje.textContent = "❌ Error al guardar el pedido.";
         console.error(error);
       }
     });
   </script>
+
 </body>
 </html>
 
