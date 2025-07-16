@@ -1,32 +1,53 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Depósito</title>
-  <link rel="stylesheet" href="css/estilos.css"/>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    .pedido {
+      border: 2px solid #ccc;
+      padding: 10px;
+      margin-bottom: 20px;
+      border-radius: 10px;
+    }
+    .pedido.reciente {
+      background-color: #e7ffe7;
+      border-left: 5px solid green;
+    }
+    .pedido.antiguo {
+      opacity: 0.8;
+    }
+    .total {
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    .filtros {
+      margin-bottom: 20px;
+    }
+  </style>
 </head>
 <body>
+  <h1>Pedidos Recibidos por Sucursal - SION S.R.L</h1>
 
-  <button id="logout" style="display:none;">Cerrar sesión</button>
-  <h1>SION S.R.L</h1>
-  <h1>Pedidos Realizados por Sucursal</h1>
-
-  <div id="login-container" style="display:none;">
-    <h2>Iniciar sesión</h2>
-    <input type="email" id="email" placeholder="Correo">
-    <input type="password" id="password" placeholder="Contraseña">
-    <button onclick="login()">Ingresar</button>
+  <div class="filtros">
+    <input type="text" id="filtroSucursal" placeholder="Filtrar por sucursal" />
+    <input type="date" id="filtroFecha" />
+    <button onclick="window.print()">🖨️ Imprimir</button>
   </div>
 
   <div id="contenedor"></div>
-
+  
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import {
-      getFirestore, collection, getDocs, doc, getDoc, query, orderBy
+      getFirestore, collection, getDocs, doc, getDoc, query, orderBy, updateDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import {
-      getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
+      getAuth, onAuthStateChanged
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     const firebaseConfig = {
@@ -42,42 +63,24 @@
     const db = getFirestore(app);
     const auth = getAuth(app);
 
-    const loginContainer = document.getElementById("login-container");
-    const logoutBtn = document.getElementById("logout");
     const contenedor = document.getElementById("contenedor");
+    const resumen = document.getElementById("resumen");
 
-    // Estado de autenticación
+    const filtroSucursal = document.getElementById("filtroSucursal");
+    const filtroFecha = document.getElementById("filtroFecha");
+
+    let pedidosHTML = [];
+
     onAuthStateChanged(auth, user => {
-      if (user) {
-        loginContainer.style.display = "none";
-        logoutBtn.style.display = "inline";
-        cargarPedidos();
-      } else {
-        loginContainer.style.display = "block";
-        logoutBtn.style.display = "none";
-      }
+      if (user) cargarPedidos();
     });
 
-    // Función de login
-    window.login = async function () {
-      const email = document.getElementById("email").value;
-      const pass = document.getElementById("password").value;
-      try {
-        await signInWithEmailAndPassword(auth, email, pass);
-      } catch (e) {
-        alert("Error de inicio de sesión: " + e.message);
-      }
-    };
-
-    // Cerrar sesión
-    logoutBtn.addEventListener("click", () => {
-      signOut(auth);
-    });
-
-    // Cargar pedidos desde Firestore
     async function cargarPedidos() {
       const q = query(collection(db, "pedidos"), orderBy("fecha", "desc"));
       const pedidosSnapshot = await getDocs(q);
+      const resumenSucursal = {};
+      pedidosHTML = [];
+
       for (const docPedido of pedidosSnapshot.docs) {
         const pedido = docPedido.data();
         const productos = pedido.productos || [];
@@ -99,11 +102,27 @@
           `;
         }));
 
+        const fechaPedido = new Date(pedido.fecha);
+        const esHoy = fechaPedido.toDateString() === new Date().toDateString();
+        const estado = pedido.estado || "pendiente";
+        const estadoSelect = `
+          <label>Estado:
+            <select class="estado-select" data-id="${docPedido.id}">
+              <option value="pendiente" ${estado === "pendiente" ? "selected" : ""}>Pendiente</option>
+              <option value="preparando" ${estado === "preparando" ? "selected" : ""}>Preparando</option>
+              <option value="enviado" ${estado === "enviado" ? "selected" : ""}>Enviado</option>
+            </select>
+          </label>
+        `;
+
         const div = document.createElement("div");
-        div.className = "pedido";
+        div.className = "pedido " + (esHoy ? "reciente" : "antiguo");
+        div.dataset.sucursal = pedido.sucursal.toLowerCase();
+        div.dataset.fecha = fechaPedido.toISOString().split("T")[0];
         div.innerHTML = `
-          <h3>${pedido.sucursal} - ${new Date(pedido.fecha).toLocaleString()}</h3>
-          <table>
+          <h3>${pedido.sucursal} - ${fechaPedido.toLocaleString()}</h3>
+          ${estadoSelect}
+          <table border="1" cellpadding="5">
             <thead>
               <tr>
                 <th>Producto</th>
@@ -112,16 +131,49 @@
                 <th>Total</th>
               </tr>
             </thead>
-            <tbody>
-              ${tablaFilas.join("")}
-            </tbody>
+            <tbody>${tablaFilas.join("")}</tbody>
           </table>
           <div class="total">Total estimado: <strong>Gs. ${total.toLocaleString()}</strong></div>
         `;
         contenedor.appendChild(div);
+        pedidosHTML.push(div);
+
+        resumenSucursal[pedido.sucursal] = (resumenSucursal[pedido.sucursal] || 0) + total;
       }
+
+      generarResumen(resumenSucursal);
+      agregarListenersEstado();
+    }
+
+    function generarResumen(resumenSucursal) {
+      resumen.innerHTML = "<h2>Resumen por Sucursal</h2><ul>" +
+        Object.entries(resumenSucursal).map(([suc, total]) =>
+          `<li>${suc}: Gs. ${total.toLocaleString()}</li>`).join("") +
+        "</ul>";
+    }
+
+    function agregarListenersEstado() {
+      document.querySelectorAll(".estado-select").forEach(select => {
+        select.addEventListener("change", async () => {
+          const id = select.dataset.id;
+          const estado = select.value;
+          await updateDoc(doc(db, "pedidos", id), { estado });
+        });
+      });
+    }
+
+    filtroSucursal.addEventListener("input", filtrar);
+    filtroFecha.addEventListener("change", filtrar);
+
+    function filtrar() {
+      const suc = filtroSucursal.value.toLowerCase();
+      const fecha = filtroFecha.value;
+      pedidosHTML.forEach(div => {
+        const coincideSucursal = div.dataset.sucursal.includes(suc);
+        const coincideFecha = !fecha || div.dataset.fecha === fecha;
+        div.style.display = coincideSucursal && coincideFecha ? "" : "none";
+      });
     }
   </script>
-
 </body>
 </html>
