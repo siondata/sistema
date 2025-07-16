@@ -3,68 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <title>Nuevo Pedido</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 800px;
-      margin: 50px auto;
-      padding: 20px;
-      border: 3px solid #00f;
-      border-radius: 10px;
-    }
-    input, select, textarea, button {
-      width: 100%;
-      margin-bottom: 10px;
-      padding: 10px;
-      font-size: 16px;
-    }
-    .product-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-    .product-item input {
-      flex: 1;
-    }
-    .remove-item-button {
-      background-color: #dc3545;
-      color: white;
-      padding: 6px 12px;
-      border: none;
-      cursor: pointer;
-      border-radius: 5px;
-    }
-    .remove-item-button:hover {
-      background-color: #c82333;
-    }
-    button {
-      background-color: green;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: darkgreen;
-    }
-    #addProductoBtn {
-      background-color: #007bff;
-    }
-    #addProductoBtn:hover {
-      background-color: #0056b3;
-    }
-    #mensaje {
-      font-weight: bold;
-      margin-top: 15px;
-    }
-  </style>
+  <link rel="stylesheet" href="img/logo.png">
+  <link rel="stylesheet" href="css/pedido.css">
 </head>
-<body>
-
+  <body>
+    <div class="logo">
+  <img src="img/logo.png">
+  </div>
   <h1>Nuevo Pedido</h1>
-
-  <form id="pedidoForm">
+    <form id="pedidoForm">
    <form id="pedidoForm">
     <label for="sucursal">Sucursal:</label>
     <select id="sucursal" required>
@@ -127,34 +74,54 @@
     });
 
     async function cargarProductos() {
-      productosDisponibles = [];
-      datalist.innerHTML = "";
-      const snapshot = await getDocs(collection(db, "productos"));
-      snapshot.forEach(docSnap => {
-        const data = docSnap.data();
-        if (data.stock > 0) {
-          productosDisponibles.push({ id: docSnap.id, ...data });
-          const option = document.createElement("option");
-          option.value = data.nombre;
-          datalist.appendChild(option);
-        }
-      });
-    }
+  productosDisponibles = [];
+  datalist.innerHTML = "";
+  const snapshot = await getDocs(collection(db, "productos"));
+  snapshot.forEach(docSnap => {
+    const data = docSnap.data();
+    const nombre = data.nombre;
+    const precio = data.precio;
+    productosDisponibles.push({ id: docSnap.id, nombre, precio });
+    
+    const option = document.createElement("option");
+    option.value = `${nombre} - Gs. ${precio.toLocaleString()}`; // Mostrar nombre + precio
+    datalist.appendChild(option);
+  });
+}
 
-    function addProductItem() {
-      const div = document.createElement("div");
-      div.classList.add("product-item");
-      div.innerHTML = `
-        <input type="text" class="producto-input" list="productosList" placeholder="Producto" required>
-        <input type="number" class="cantidad-input" placeholder="Cantidad" min="1" required>
-        <button type="button" class="remove-item-button">🗑️</button>
-      `;
-      div.querySelector(".remove-item-button").addEventListener("click", () => {
-        div.remove();
-      });
-      productosContainer.appendChild(div);
-    }
+function addProductItem() {
+  const div = document.createElement("div");
+  div.classList.add("product-item");
+  div.innerHTML = `
+    <input type="text" class="producto-input" list="productosList" placeholder="Producto" required>
+    <input type="number" class="cantidad-input" placeholder="Cantidad" min="1" required>
+    <button type="button" class="remove-item-button">🗑️</button>
+  `;
 
+  const productoInput = div.querySelector(".producto-input");
+  const precioDisplay = div.querySelector(".precio-display");
+
+ productoInput.addEventListener("input", () => {
+  const texto = productoInput.value.trim().toLowerCase();
+  const nombreBuscado = texto.split(" - ")[0]; // Obtener solo el nombre antes del guion
+  const producto = productosDisponibles.find(p => p.nombre.toLowerCase() === nombreBuscado);
+
+  if (producto) {
+    precioDisplay.textContent = `Gs. ${producto.precio.toLocaleString()}`;
+  } else {
+    precioDisplay.textContent = `Gs. 0`;
+  }
+});
+
+
+  productosContainer.appendChild(div);
+
+  const removeButton = div.querySelector(".remove-item-button");
+  removeButton.addEventListener("click", () => {
+    div.remove();
+  });
+
+}
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       mensaje.textContent = "";
@@ -166,7 +133,8 @@
       const items = document.querySelectorAll(".product-item");
 
       for (const item of items) {
-        const nombre = item.querySelector(".producto-input").value.trim();
+        const nombreCompleto  = item.querySelector(".producto-input").value.trim();
+        const nombre = nombreCompleto.split(" - ")[0]; // Extraer solo el nombre
         const cantidad = parseInt(item.querySelector(".cantidad-input").value);
         const producto = productosDisponibles.find(p => p.nombre.toLowerCase() === nombre.toLowerCase());
 
@@ -218,5 +186,4 @@
 
 </body>
 </html>
-
 
