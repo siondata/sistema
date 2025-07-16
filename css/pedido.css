@@ -1,0 +1,123 @@
+/* Fondo general */
+body {
+  background-color: #f7f5fb;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #2c2c2c;
+  margin: 0;
+  padding: 40px;
+}
+
+/* Contenedor principal del formulario */
+form {
+  background-color: #ffffff;
+  border: 2px solid green;       /*#c8b6ff;*/
+  border-radius: 12px;
+  padding: 30px;
+  max-width: 700px;
+  margin: 0 auto;
+  box-shadow: 0 4px 20px rgba(153, 102, 255, 0.2);
+}
+
+/* Títulos */
+h1, h2 {
+  text-align: center;
+  color: #7b2cbf;
+}
+
+/* Etiquetas y campos */
+label {
+  font-weight: bold;
+  margin-bottom: 5px;
+  display: block;
+  color: #5f4b8b;
+}
+
+input[type="text"],
+input[type="number"],
+select,
+textarea {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 15px;
+  border: 1px solid #d0c4f3;
+  border-radius: 8px;
+  background-color: #f8f5ff;
+  font-size: 16px;
+  transition: border-color 0.2s;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: #a084e8;
+  outline: none;
+}
+
+/* Botones */
+button {
+  display: inline-block;
+  padding: 12px 18px;
+  font-size: 16px;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: background-color 0.3s;
+}
+
+/* Botón enviar */
+#enviarproducto {
+  background-color: #38b000;
+  color: white;
+}
+#enviarproducto:hover {
+  background-color: #2d8500;
+}
+
+/* Botón añadir */
+#addProductoBtn {
+  background-color: #8e44ad;
+  color: white;
+}
+#addProductoBtn:hover {
+  background-color: #6c3483;
+}
+
+/* Botón eliminar producto */
+.remove-item-button {
+  background-color: #e74c3c;
+  color: white;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.remove-item-button:hover {
+  background-color: #c0392b;
+}
+
+/* Productos en fila */
+.product-item {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+/* Mensaje de estado */
+#mensaje {
+  text-align: center;
+  margin-top: 20px;
+  font-weight: bold;
+  color: #2f2f2f;
+}
+.logo {
+  display: flex;
+  justify-content: center; /* Centra horizontalmente */
+  padding-top: 40px;       /* Espacio desde arriba */
+}
+
+.logo img {
+  height: 60px;
+  width: auto;
+}
