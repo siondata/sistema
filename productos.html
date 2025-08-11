@@ -6,42 +6,50 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      max-width: 900px;
+      max-width: 1000px;
       margin: 40px auto;
       padding: 20px;
       border: 3px solid rgb(255, 0, 255);
       border-radius: 10px;
     }
     h1 { text-align: center; }
-    table { width: 100%; border-collapse: collapse; margin-top: 30px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
     th, td {
-      padding: 10px;
+      padding: 6px;
       border: 1px solid #ccc;
       text-align: left;
     }
     th { background-color: #f2f2f2; }
-    form { margin-top: 40px; border-top: 1px solid #ccc; padding-top: 20px; }
-    input, button {
-      padding: 10px;
-      font-size: 16px;
-      margin-bottom: 10px;
+    form { margin-top: 20px; border-top: 1px solid #ccc; padding-top: 20px; }
+    input, button, select {
+      padding: 8px;
+      font-size: 14px;
+      margin-bottom: 8px;
       width: 100%;
+      box-sizing: border-box;
     }
     button {
       background-color: #009c24;
       color: white;
       border: none;
       cursor: pointer;
+      padding: 6px 10px;
+      font-size: 13px;
     }
-    button:hover {
-      background-color: #007f1f;
+    button:hover { background-color: #007f1f; }
+    .btn-eliminar { background-color: red; }
+    .btn-eliminar:hover { background-color: darkred; }
+    #mensaje { margin-top: 10px; font-weight: bold; }
+    #loginSection, #mainSection { display: none; }
+    .tabla-container { overflow-x: auto; }
+    td input, td select {
+      font-size: 13px;
+      padding: 4px;
+      width: 100%;
+      box-sizing: border-box;
     }
-    #mensaje {
-      margin-top: 15px;
-      font-weight: bold;
-    }
-    #loginSection, #mainSection {
-      display: none;
+    td button {
+      margin: 1px;
     }
   </style>
 </head>
@@ -56,7 +64,7 @@
   <p id="loginError" style="color:red;"></p>
 </div>
 
-<!-- 📦 CONTENIDO SOLO SI ESTÁ AUTENTICADO -->
+<!-- 📦 CONTENIDO -->
 <div id="mainSection">
   <h1>Productos en Stock</h1>
   
@@ -66,26 +74,41 @@
     <input type="number" id="precio" placeholder="Precio (Gs.)" min="0" required>
     <input type="number" id="costo" placeholder="Costo (Gs.)" min="0" required>
     <input type="number" id="stock" placeholder="Cantidad disponible" min="0" required>
+
+    <select id="categoria" required>
+      <option value="">Seleccione Categoría</option>
+      <option value="sobre">Sobre</option>
+      <option value="tira">Tira</option>
+      <option value="consumidor">Consumidor</option>
+      <option value="comercial">Comercial</option>
+    </select>
+
+    <input type="number" id="peso" placeholder="Peso aprox (gr.)" min="0" step="0.01" required>
+
     <button type="submit">Guardar Producto</button>
     <div id="mensaje"></div>
-<input type="text" id="busqueda" placeholder="Buscar producto por nombre..." style="width: 40%; padding: 10px; margin-top: 20px; font-size: 16px;">
 
-
+    <input type="text" id="busqueda" placeholder="Buscar producto por nombre..." style="width: 40%; padding: 6px; margin-top: 10px; font-size: 14px;">
   </form>
-    <table>
-    <thead>
-      <tr>
-        <th>Producto</th>
-        <th>Precio</th>
-        <th>Stock Disponible</th>
-        <th>Costo (Gs.)</th>
-        <th>Acciones</th>
-      </tr>
-    </thead>
-    <tbody id="tabla-productos"></tbody>
-  </table>
 
-  <button id="logoutBtn" style="margin-top: 20px;">Cerrar sesión</button>
+  <div class="tabla-container">
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 15%;">Producto</th>
+          <th style="width: 10%;">Precio</th>
+          <th style="width: 8%;">Stock</th>
+          <th style="width: 10%;">Costo</th>
+          <th style="width: 15%;">Categoría</th>
+          <th style="width: 10%;">Peso (gr.)</th>
+          <th style="width: 15%;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tabla-productos"></tbody>
+    </table>
+  </div>
+
+  <button id="logoutBtn" style="margin-top: 10px;">Cerrar sesión</button>
 </div>
 
 <!-- 🔧 SCRIPT -->
@@ -100,7 +123,8 @@
     query,
     orderBy,
     doc,
-    updateDoc
+    updateDoc,
+    deleteDoc
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -169,34 +193,65 @@
       const fila = document.createElement("tr");
       fila.innerHTML = `
         <td>${producto.nombre}</td>
-        <td><input type="number" value="${producto.precio}" min="0" id="precio-${producto.id}" style="width: 100px;"></td>
-        <td><input type="number" value="${producto.stock}" min="0" id="stock-${producto.id}" style="width: 80px;"></td>
-        <td><input type="number" value="${producto.costo ?? ''}" min="0" id="costo-${producto.id}" style="width: 100px;"></td>
-        <td><button onclick="guardarCambios('${producto.id}')">💾 Guardar</button></td>
+        <td><input type="number" value="${producto.precio}" min="0" step="0.01" id="precio-${producto.id}"></td>
+        <td><input type="number" value="${producto.stock}" min="0" id="stock-${producto.id}"></td>
+        <td><input type="number" value="${producto.costo ?? ''}" min="0" step="0.01" id="costo-${producto.id}"></td>
+        <td>
+          <select id="categoria-${producto.id}">
+            <option value="sobre" ${producto.categoria === 'sobre' ? 'selected' : ''}>Sobre</option>
+            <option value="tira" ${producto.categoria === 'tira' ? 'selected' : ''}>Tira</option>
+            <option value="consumidor" ${producto.categoria === 'consumidor' ? 'selected' : ''}>Consumidor</option>
+            <option value="comercial" ${producto.categoria === 'comercial' ? 'selected' : ''}>Comercial</option>
+          </select>
+        </td>
+        <td><input type="number" value="${producto.peso ?? ''}" min="0" step="0.01" id="peso-${producto.id}"></td>
+        <td>
+          <button onclick="guardarCambios('${producto.id}')">💾</button>
+          <button class="btn-eliminar" onclick="eliminarProducto('${producto.id}')">🗑️</button>
+        </td>
       `;
       tablaBody.appendChild(fila);
     });
   }
 
   window.guardarCambios = async function (id) {
-    const nuevoPrecio = parseInt(document.getElementById(`precio-${id}`).value);
+    const nuevoPrecio = parseFloat(document.getElementById(`precio-${id}`).value);
     const nuevoStock = parseInt(document.getElementById(`stock-${id}`).value);
-    const nuevoCosto = parseInt(document.getElementById(`costo-${id}`).value);
-    if (isNaN(nuevoPrecio) || isNaN(nuevoStock) || isNaN(nuevoCosto)) {
-      alert("⚠️ Ingrese valores válidos.");
+    const nuevoCosto = parseFloat(document.getElementById(`costo-${id}`).value);
+    const nuevaCategoria = document.getElementById(`categoria-${id}`).value;
+    const nuevoPeso = parseFloat(document.getElementById(`peso-${id}`).value);
+
+    if (isNaN(nuevoPrecio) || isNaN(nuevoStock) || isNaN(nuevoCosto) || isNaN(nuevoPeso) || !nuevaCategoria) {
+      alert("⚠️ Complete todos los campos correctamente.");
       return;
     }
+
     try {
       await updateDoc(doc(db, "productos", id), {
         precio: nuevoPrecio,
         stock: nuevoStock,
-        costo: nuevoCosto
+        costo: nuevoCosto,
+        categoria: nuevaCategoria,
+        peso: nuevoPeso
       });
       alert("✅ Producto actualizado.");
       cargarProductos();
     } catch (error) {
       console.error("❌ Error al actualizar:", error);
       alert("❌ No se pudo actualizar el producto.");
+    }
+  };
+
+  window.eliminarProducto = async function (id) {
+    if (confirm("¿Seguro que desea eliminar este producto?")) {
+      try {
+        await deleteDoc(doc(db, "productos", id));
+        alert("✅ Producto eliminado.");
+        cargarProductos();
+      } catch (error) {
+        console.error("❌ Error al eliminar:", error);
+        alert("❌ No se pudo eliminar el producto.");
+      }
     }
   };
 
@@ -210,15 +265,18 @@
     e.preventDefault();
     mensaje.textContent = "";
     const nombre = document.getElementById("nombre").value.trim();
-    const precio = parseInt(document.getElementById("precio").value);
+    const precio = parseFloat(document.getElementById("precio").value);
     const stock = parseInt(document.getElementById("stock").value);
-    const costo = parseInt(document.getElementById("costo").value);
-    if (!nombre || isNaN(precio) || isNaN(stock)) {
+    const costo = parseFloat(document.getElementById("costo").value);
+    const categoria = document.getElementById("categoria").value;
+    const peso = parseFloat(document.getElementById("peso").value);
+
+    if (!nombre || isNaN(precio) || isNaN(stock) || isNaN(costo) || !categoria || isNaN(peso)) {
       mensaje.textContent = "❌ Complete todos los campos correctamente.";
       return;
     }
     try {
-      await addDoc(collection(db, "productos"), { nombre, precio, stock, costo });
+      await addDoc(collection(db, "productos"), { nombre, precio, stock, costo, categoria, peso });
       mensaje.textContent = "✅ Producto añadido correctamente.";
       document.getElementById("formAgregar").reset();
       cargarProductos();
