@@ -1,48 +1,104 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Nuevo Pedido</title>
-  <link rel="stylesheet" href="img/logo.png"/>
+  <meta charset="utf-8" />
+  <title>Nuevo Pedido — Carrito</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link rel="stylesheet" href="css/pedido.css" />
+  <style>
+    /* Estilos básicos (puedes mover a css/pedido.css) */
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;margin:16px;color:#111}
+    .container{display:flex;gap:20px;flex-wrap:wrap}
+    .panel{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:12px;box-shadow:0 1px 4px rgba(0,0,0,.04);flex:1 1 420px}
+    h1{margin:0 0 12px; color: rgb(202, 0, 202);}
+    label{display:block;margin-top:8px;font-weight:600}
+    input[type="text"], select, textarea, input[type="number"]{width:100%;padding:8px;margin-top:6px;border:1px solid #cbd5e1;border-radius:6px}
+    button{padding:8px 12px;border-radius:6px;border:0;background:#0ea5a4;color:white;cursor:pointer}
+    button.ghost{background:#94a3b8}
+    .row{display:flex;gap:8px;align-items:center}
+    .row > *{flex:1}
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{padding:8px;border-bottom:1px solid #eef2f7;text-align:left}
+    .precio-display{min-width:120px;display:inline-block}
+    .small{font-size:.9rem;color:#64748b}
+    .danger{background:#ef4444}
+    #mensaje{margin-top:10px}
+    @media (max-width:860px){ .container{flex-direction:column} }
+  </style>
 </head>
-  <body>
-    <div class="logo">
-  <img src="img/logo.png">
+<body>
+  <h1>Sion Productos</h1>
+
+  <div class="container">
+    <!-- Panel izquierdo: formulario / buscador -->
+    <div class="panel" id="panel-form">
+      <form id="pedidoForm">
+        <label for="sucursal">Sucursal</label>
+        <select id="sucursal" required>
+          <option value="">Seleccione una sucursal</option>
+          <option value="Sucursal KM5">Sucursal KM5</option>
+          <option value="Sucursal KM7">Sucursal KM7</option>
+          <option value="Sucursal KM8">Sucursal KM8</option>
+          <option value="Sucursal GSS">Sucursal GSS</option>
+        </select>
+
+        <label for="productoSelect">Buscar producto (nombre - precio)</label>
+        <input id="productoSelect" type="text" list="productosList" placeholder="Escriba para buscar..." autocomplete="off">
+        <datalist id="productosList"></datalist>
+
+        <div style="display:flex;gap:8px;margin-top:8px;align-items:end;">
+          <div style="flex:1">
+            <label class="small">Precio</label>
+            <div class="precio-display" id="precioSelected">Gs. 0</div>
+          </div>
+
+          <div style="width:120px">
+            <label for="cantidadToAdd">Cantidad</label>
+            <input id="cantidadToAdd" type="number" min="0" value="0">
+          </div>
+
+          <div style="width:150px">
+            <button type="button" id="addToCartBtn">Agregar al carrito</button>
+          </div>
+        </div>
+
+        <label for="comentarios">Comentarios</label>
+        <textarea id="comentarios" rows="3" placeholder="Comentarios (opcional)"></textarea>
+
+        <div style="margin-top:12px">
+          <button id="enviarPedidoBtn" type="submit">Enviar Pedido</button>
+          <button id="limpiarBtn" type="button" class="ghost" style="margin-left:8px">Limpiar carrito</button>
+        </div>
+      </form>
+
+      <p id="mensaje" class="small"></p>
+    </div>
+
+    <!-- Panel derecho: carrito -->
+    <div class="panel" id="panel-cart">
+      <h3>Carrito</h3>
+      <div id="cartCount" class="small">0 ítems</div>
+
+      <table id="cartTable" aria-label="Carrito de productos">
+        <thead>
+          <tr><th>Producto</th><th>Precio U.</th><th>Cantidad</th><th>Subtotal</th><th></th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <h3 id="total" style="text-align:right">Total: Gs. 0</h3>
+
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button id="printBtn" type="button" class="ghost">Imprimir</button>
+      </div>
+    </div>
   </div>
-  <h1>Nuevo Pedido</h1>
-    <form id="pedidoForm">
-   <form id="pedidoForm">
-    <label for="sucursal">Sucursal:</label>
-    <select id="sucursal" required>
-      <option value="">Seleccione una sucursal</option>
-      <option value="Sucursal KM5">Sucursal KM5</option>
-      <option value="Sucursal KM7">Sucursal KM7</option>
-      <option value="Sucursal KM8">Sucursal KM8</option>
-      <option value="Sucursal GSS">Sucursal GSS</option>
-    </select>
 
-    <h2>Productos</h2>
-    
-    <!-- Datalist para autocompletar productos -->
-    <datalist id="productosList"></datalist>
-
-    <div id="productosContainer"></div>
-
-    <button id="addProductoBtn" type="button">Añadir otro producto</button>
-
-    <label for="comentarios">Comentarios:</label>
-    <textarea id="comentarios" placeholder="Comentarios adicionales (opcional)" rows="3"></textarea>
-
-    <button id="enviarproducto" type="submit">Enviar Pedido</button>
-  </form>
-
-  <p id="mensaje"></p>
-
+  <!-- Firebase + lógica -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCr0SM_u0c4aEG_tT_CXWLcvd6alZJT44c",
@@ -58,132 +114,294 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
+    // DOM
     const datalist = document.getElementById("productosList");
-    const productosContainer = document.getElementById("productosContainer");
-    const addProductoBtn = document.getElementById("addProductoBtn");
-    const form = document.getElementById("pedidoForm");
+    const productoSelect = document.getElementById("productoSelect");
+    const precioSelected = document.getElementById("precioSelected");
+    const cantidadToAdd = document.getElementById("cantidadToAdd");
+    const addToCartBtn = document.getElementById("addToCartBtn");
+    const cartTableBody = document.querySelector("#cartTable tbody");
+    const totalEl = document.getElementById("total");
+    const cartCountEl = document.getElementById("cartCount");
     const mensaje = document.getElementById("mensaje");
+    const limpiarBtn = document.getElementById("limpiarBtn");
+    const printBtn = document.getElementById("printBtn");
+    const form = document.getElementById("pedidoForm");
 
-    let productosDisponibles = [];
+    // Datos en memoria
+    let productosDisponibles = []; // array de objetos {id,nombre,precio,stock}
+    const displayToProduct = new Map(); // "Nombre - Gs. 10.000" => producto
+    let cartItems = []; // {productId,nombre,precio,cantidad}
 
-    // Redirección si no está autenticado
-    onAuthStateChanged(auth, (user) => {
+    // Estado: usuario (vendedor)
+    let vendedorEmail = "";
+
+    // Redirección si no está autenticado; obtener email
+    onAuthStateChanged(auth, user => {
       if (!user) {
+        // si querés redirigir al login:
         window.location.href = "index.html";
+        return;
+      }
+      vendedorEmail = user.email || user.uid || "vendedor";
+    });
+
+    // Carga productos desde Firestore y llena datalist
+    async function cargarProductos() {
+      productosDisponibles = [];
+      displayToProduct.clear();
+      datalist.innerHTML = "";
+      try {
+        const snap = await getDocs(collection(db, "productos"));
+        snap.forEach(docSnap => {
+          const data = docSnap.data();
+          const nombre = String(data.nombre || "").trim();
+          const precio = Number(data.precio || 0);
+          const stock = Number(data.stock || 0);
+          const prod = { id: docSnap.id, nombre, precio, stock };
+          productosDisponibles.push(prod);
+
+          const display = `${nombre} - Gs. ${precio.toLocaleString()}`;
+          const opt = document.createElement("option");
+          opt.value = display;
+          datalist.appendChild(opt);
+          // mapear display exacto a producto (si hay duplicados, cada display será distinto si precio distinto)
+          displayToProduct.set(display, prod);
+        });
+      } catch (err) {
+        console.error("Error cargando productos:", err);
+        mensaje.textContent = "Error cargando catálogo de productos.";
+      }
+    }
+
+    // Cuando se escribe en el input: detectar selección válida y mostrar precio
+    productoSelect.addEventListener("input", () => {
+      const texto = productoSelect.value.trim();
+      let prod = null;
+
+      // si coincide con la cadena mostrada (Nombre - Gs. ...)
+      if (displayToProduct.has(texto)) {
+        prod = displayToProduct.get(texto);
+      } else {
+        // si escribió solo el nombre y existe UNO con ese nombre, tomarlo (si hay varios, no elegir)
+        const matches = productosDisponibles.filter(p => p.nombre.toLowerCase() === texto.toLowerCase());
+        if (matches.length === 1) prod = matches[0];
+      }
+
+      if (prod) {
+        // guardar selección inequívoca en dataset del input
+        productoSelect.value = prod.nombre; // mostrar solo nombre
+        productoSelect.dataset.productId = prod.id;
+        productoSelect.dataset.precio = String(prod.precio);
+        precioSelected.textContent = `Gs. ${prod.precio.toLocaleString()}`;
+      } else {
+        // no válido
+        delete productoSelect.dataset.productId;
+        delete productoSelect.dataset.precio;
+        precioSelected.textContent = `Gs. 0`;
       }
     });
 
-    async function cargarProductos() {
-  productosDisponibles = [];
-  datalist.innerHTML = "";
-  const snapshot = await getDocs(collection(db, "productos"));
-  snapshot.forEach(docSnap => {
-    const data = docSnap.data();
-    const nombre = data.nombre;
-    const precio = data.precio;
-    productosDisponibles.push({ id: docSnap.id, nombre, precio });
-    
-    const option = document.createElement("option");
-    option.value = `${nombre} - Gs. ${precio.toLocaleString()}`; // Mostrar nombre + precio
-    datalist.appendChild(option);
-  });
-}
+    // Añadir al carrito
+    addToCartBtn.addEventListener("click", () => {
+      mensaje.textContent = "";
+      const nombre = productoSelect.value.trim();
+      const productId = productoSelect.dataset.productId || "";
+      const precio = Number(productoSelect.dataset.precio || 0);
+      const cantidad = parseInt(cantidadToAdd.value) || 0;
 
-function addProductItem() {
-  const div = document.createElement("div");
-  div.classList.add("product-item");
-  div.innerHTML = `
-    <input type="text" class="producto-input" list="productosList" placeholder="Producto" required>
-    <input type="number" class="cantidad-input" placeholder="Cantidad" min="1" required>
-    <button type="button" class="remove-item-button">🗑️</button>
-  `;
+      if (!productId || !nombre) {
+        mensaje.textContent = "Seleccione un producto válido desde la lista (Nombre - Gs. Precio).";
+        return;
+      }
+      if (cantidad <= 0) {
+        mensaje.textContent = "Ingrese una cantidad válida (> 0).";
+        return;
+      }
 
-  const productoInput = div.querySelector(".producto-input");
-  const precioDisplay = div.querySelector(".precio-display");
+      // verificar stock actual desde productosDisponibles
+      const prodInfo = productosDisponibles.find(p => p.id === productId);
+      if (!prodInfo) {
+        mensaje.textContent = "Producto no válido (recargue la página).";
+        return;
+      }
+      const existente = cartItems.find(it => it.productId === productId);
+      const totalSolicitado = (existente ? existente.cantidad : 0) + cantidad;
+      if (totalSolicitado > (prodInfo.stock || 0)) {
+        mensaje.textContent = `Stock insuficiente. Disponible: ${prodInfo.stock}`;
+        return;
+      }
 
- productoInput.addEventListener("input", () => {
-  const texto = productoInput.value.trim().toLowerCase();
-  const nombreBuscado = texto.split(" - ")[0]; // Obtener solo el nombre antes del guion
-  const producto = productosDisponibles.find(p => p.nombre.toLowerCase() === nombreBuscado);
+      if (existente) {
+        existente.cantidad += cantidad;
+      } else {
+        cartItems.push({ productId, nombre, precio, cantidad });
+      }
 
-  if (producto) {
-    precioDisplay.textContent = `Gs. ${producto.precio.toLocaleString()}`;
-  } else {
-    precioDisplay.textContent = `Gs. 0`;
-  }
-});
+      // limpiar selección
+      productoSelect.value = "";
+      delete productoSelect.dataset.productId;
+      delete productoSelect.dataset.precio;
+      precioSelected.textContent = `Gs. 0`;
+      cantidadToAdd.value = 1;
 
+      renderCart();
+    });
 
-  productosContainer.appendChild(div);
+    // Renderizar carrito en tabla
+    function renderCart() {
+      cartTableBody.innerHTML = "";
+      let total = 0;
+      let count = 0;
+      cartItems.forEach(item => {
+        const subtotal = item.precio * item.cantidad;
+        total += subtotal;
+        count += item.cantidad;
 
-  const removeButton = div.querySelector(".remove-item-button");
-  removeButton.addEventListener("click", () => {
-    div.remove();
-  });
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${item.nombre}</td>
+          <td>Gs. ${Number(item.precio).toLocaleString()}</td>
+          <td><input type="number" min="1" value="${item.cantidad}" data-product-id="${item.productId}" class="qty-input" style="width:80px;padding:6px;border-radius:6px;border:1px solid #cbd5e1"></td>
+          <td>Gs. ${subtotal.toLocaleString()}</td>
+          <td><button class="remove-btn" data-product-id="${item.productId}" title="Eliminar">🗑️</button></td>
+        `;
+        cartTableBody.appendChild(tr);
+      });
 
-}
+      totalEl.textContent = `Total: Gs. ${total.toLocaleString()}`;
+      cartCountEl.textContent = `${count} ítems`;
+
+      // agregar listeners para qty changes y remove
+      document.querySelectorAll(".qty-input").forEach(input => {
+        input.addEventListener("change", (e) => {
+          const pid = input.dataset.productId;
+          let newQty = parseInt(input.value) || 1;
+          if (newQty < 1) newQty = 1;
+          const prodInfo = productosDisponibles.find(p => p.id === pid);
+          if (newQty > (prodInfo.stock || 0)) {
+            mensaje.textContent = `Stock insuficiente para ${prodInfo.nombre}. Disponible: ${prodInfo.stock}`;
+            input.value = prodInfo.stock || 1;
+            newQty = parseInt(input.value);
+          } else {
+            mensaje.textContent = "";
+          }
+          const item = cartItems.find(it => it.productId === pid);
+          if (item) item.cantidad = newQty;
+          renderCart();
+        });
+      });
+
+      document.querySelectorAll(".remove-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const pid = btn.dataset.productId;
+          cartItems = cartItems.filter(it => it.productId !== pid);
+          renderCart();
+        });
+      });
+    }
+
+    // Limpiar carrito
+    limpiarBtn.addEventListener("click", () => {
+      cartItems = [];
+      renderCart();
+      mensaje.textContent = "Carrito limpiado.";
+    });
+
+    // Imprimir resumen simple
+    printBtn.addEventListener("click", () => {
+      const win = window.open("", "_blank");
+      const rowsHtml = cartItems.map(it => `<tr><td>${it.nombre}</td><td>${it.cantidad}</td><td>Gs. ${it.precio.toLocaleString()}</td><td>Gs. ${(it.precio*it.cantidad).toLocaleString()}</td></tr>`).join("");
+      const total = cartItems.reduce((s,it)=>s+it.precio*it.cantidad,0);
+      win.document.write(`
+        <html><head><title>Ticket</title></head><body>
+        <h2>Pedido - ${new Date().toLocaleString()}</h2>
+        <table border="1" cellpadding="6" cellspacing="0">
+        <tr><th>Producto</th><th>Cantidad</th><th>Precio U.</th><th>Subtotal</th></tr>
+        ${rowsHtml}
+        <tr><td colspan="3" style="text-align:right"><strong>Total</strong></td><td><strong>Gs. ${total.toLocaleString()}</strong></td></tr>
+        </table>
+        </body></html>
+      `);
+      win.document.close();
+      win.print();
+    });
+
+    // Enviar pedido a Firestore
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       mensaje.textContent = "";
 
       const sucursal = document.getElementById("sucursal").value;
       const comentarios = document.getElementById("comentarios").value;
-      const itemsPedido = [];
-      const productosUsados = new Set();
-      const items = document.querySelectorAll(".product-item");
 
-      for (const item of items) {
-        const nombreCompleto  = item.querySelector(".producto-input").value.trim();
-        const nombre = nombreCompleto.split(" - ")[0]; // Extraer solo el nombre
-        const cantidad = parseInt(item.querySelector(".cantidad-input").value);
-        const producto = productosDisponibles.find(p => p.nombre.toLowerCase() === nombre.toLowerCase());
-
-        if (!producto || isNaN(cantidad) || cantidad <= 0 || cantidad > producto.stock) {
-          mensaje.textContent = "❌ Verifique los productos ingresados.";
-          return;
-        }
-
-        if (productosUsados.has(producto.id)) {
-          mensaje.textContent = "❌ No se puede repetir el mismo producto.";
-          return;
-        }
-
-        productosUsados.add(producto.id);
-        itemsPedido.push({ productoId: producto.id, nombre: producto.nombre, cantidad });
+      if (!sucursal) {
+        mensaje.textContent = "Seleccione una sucursal.";
+        return;
+      }
+      if (cartItems.length === 0) {
+        mensaje.textContent = "El carrito está vacío.";
+        return;
       }
 
+      // Validar stock actual desde Firestore antes de enviar (para evitar race conditions)
       try {
-        await addDoc(collection(db, "pedidos"), {
+        // Recopilar ids y leer docs
+        const productIds = cartItems.map(it => it.productId);
+        const docsPromises = productIds.map(id => getDoc(doc(db, "productos", id)));
+        const snaps = await Promise.all(docsPromises);
+
+        // Verificar stock
+        for (const it of cartItems) {
+          const snap = snaps.find(s => s.id === it.productId);
+          const currentStock = Number(snap?.data()?.stock ?? 0);
+          if (it.cantidad > currentStock) {
+            mensaje.textContent = `Stock insuficiente para ${it.nombre}. Disponible: ${currentStock}`;
+            return;
+          }
+        }
+
+        // Guardar pedido y actualizar stocks en batch (atomicidad parcial)
+        // Nota: Firestore batched writes limit = 500 operations; aquí será pequeño
+        const pedidoObj = {
           fecha: new Date().toISOString(),
           sucursal,
+          vendedor: vendedorEmail,
           comentarios,
-          productos: itemsPedido
-        });
+          productos: cartItems.map(it => ({ productoId: it.productId, nombre: it.nombre, cantidad: it.cantidad, precioUnitario: it.precio })),
+          total: cartItems.reduce((s,it)=>s+it.precio*it.cantidad,0),
+          estado: "pendiente"
+        };
 
-        for (const item of itemsPedido) {
-          const ref = doc(db, "productos", item.productoId);
-          const snap = await getDoc(ref);
-          const nuevoStock = (snap.data().stock || 0) - item.cantidad;
-          await updateDoc(ref, { stock: nuevoStock });
+        // 1) Crear doc pedido
+        const pedidoRef = await addDoc(collection(db, "pedidos"), pedidoObj);
+
+        // 2) Actualizar stock por cada producto
+        // Usamos updateDoc secuencial (podés usar batched writes si preferís)
+        for (const it of cartItems) {
+          const prodRef = doc(db, "productos", it.productId);
+          const snap = await getDoc(prodRef);
+          const currentStock = Number(snap.data().stock || 0);
+          const nuevoStock = currentStock - it.cantidad;
+          await updateDoc(prodRef, { stock: nuevoStock });
         }
 
         mensaje.textContent = "✅ Pedido enviado correctamente.";
+        cartItems = [];
+        renderCart();
         form.reset();
-        productosContainer.innerHTML = "";
-        addProductItem();
-        cargarProductos();
-      } catch (error) {
-        console.error("Error al enviar pedido:", error);
-        mensaje.textContent = "❌ Error al guardar el pedido.";
+        await cargarProductos(); // recargar stocks y lista
+      } catch (err) {
+        console.error("Error enviando pedido:", err);
+        mensaje.textContent = "❌ Error al enviar pedido. Revisa la consola.";
       }
     });
 
-    addProductoBtn.addEventListener("click", addProductItem);
-
-    cargarProductos();
-    addProductItem();
+    // Inicialización
+    (async function init(){
+      await cargarProductos();
+      renderCart();
+    })();
   </script>
-
 </body>
 </html>
-
