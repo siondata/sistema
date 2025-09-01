@@ -2,132 +2,219 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Totales del Día</title>
+  <title>Recepción de Pedidos</title>
   <link rel="stylesheet" href="css/estilos.css">
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h1 { color: #333; }
+    #filtros { margin-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { padding: 8px; border: 1px solid #ddd; text-align: left; }
+    th { background: #f4f4f4; }
+    tr.reciente { background: #e6ffe6; }
+    .total-dia { font-weight: bold; margin-top: 10px; }
+    .acciones { margin-top: 15px; }
+    button { margin-right: 8px; }
+  </style>
 </head>
 <body>
-   
   <button id="logout" style="display:none;">Cerrar sesión</button> 
-  <h1>Pedidos por Fecha </h1>
+  <h1>Recepción de Pedidos</h1>
 
   <div id="login-container" style="display:none;">
-    <input id="email" type="email" id="email" placeholder="Correo">
-    <input id="password" type="password" id="password" placeholder="Contraseña">
+    <input id="email" type="email" placeholder="Correo">
+    <input id="password" type="password" placeholder="Contraseña">
     <button id="loginBtn" onclick="login()">Iniciar sesión</button>
-
   </div>
 
+  <!-- Filtros -->
+  <div id="filtros">
+    <label for="sucursalFiltro">Sucursal:</label>
+    <select id="sucursalFiltro">
+      <option value="">Todas</option>
+    </select>
+
+    <label for="fechaInicio">Desde:</label>
+    <input type="date" id="fechaInicio">
+    <label for="fechaFin">Hasta:</label>
+    <input type="date" id="fechaFin">
+
+    <button onclick="mostrarTotalesPorDia()">Aplicar Filtros</button>
+  </div>
+
+  <!-- Resultados -->
   <div id="resultados"></div>
-
-  <!-- Mismo HTML y estilos de antes... -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import {
-    getFirestore,
-    collection,
-    getDocs,
-    doc,
-    query,
-    orderBy
-  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-  import {
-    getAuth,
-    signInWithEmailAndPassword,
-    onAuthStateChanged,
-    signOut
-  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyCr0SM_u0c4aEG_tT_CXWLcvd6alZJT44c",
-    authDomain: "siondata22.firebaseapp.com",
-    projectId: "siondata22",
-    storageBucket: "siondata22.appspot.com",
-    messagingSenderId: "946379205241",
-    appId: "1:946379205241:web:0fe04a6246518451ee42a8",
-    measurementId: "G-EX6YDJYS1N"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  const auth = getAuth(app);
-
-  const loginContainer = document.getElementById("login-container");
-  const logoutBtn = document.getElementById("logout");
-  const resultados = document.getElementById("resultados");
-
-  const productosCache = new Map();
-
-  // Precargar productos una sola vez
-  async function precargarProductos() {
-    const snap = await getDocs(collection(db, "productos"));
-    snap.forEach(doc => {
-      productosCache.set(doc.id, doc.data());
-    });
-  }
-
-  onAuthStateChanged(auth, async user => {
-    if (user) {
-      loginContainer.style.display = "none";
-      logoutBtn.style.display = "inline";
-      await precargarProductos(); // Cargamos primero los precios
-      mostrarTotalesPorDia();
-    } else {
-      loginContainer.style.display = "block";
-      logoutBtn.style.display = "none";
-    }
-  });
-
-  window.login = async function () {
-    const email = document.getElementById("email").value;
-    const pass = document.getElementById("password").value;
-    try {
-      await signInWithEmailAndPassword(auth, email, pass);
-    } catch (e) {
-      alert("Error de inicio de sesión: " + e.message);
-    }
-  };
-
-  logoutBtn.addEventListener("click", () => {
-    signOut(auth);
-  });
-
-  async function mostrarTotalesPorDia() {
-    const q = query(collection(db, "pedidos"), orderBy("fecha", "desc"));
-    const pedidosSnapshot = await getDocs(q);
-    const totales = {};
-
-for (const docPedido of pedidosSnapshot.docs) {
-  const pedido = docPedido.data();
-  const productos = pedido.productos || [];
-  let totalPedido = 0;
-
-  for (const p of productos) {
-    const prodData = productosCache.get(p.productoId);
-    const precio = prodData ? prodData.precio || 0 : 0;
-    totalPedido += precio * p.cantidad;
-  }
-
-  const fecha = new Date(pedido.fecha);
-  const dia = fecha.toLocaleDateString("es-ES");
-  const sucursal = pedido.sucursal || "Desconocida";
-  const clave = `${dia} - ${sucursal}`;
-
-  totales[clave] = (totales[clave] || 0) + totalPedido;
-}
-
-for (const clave in totales) {
-  const div = document.createElement("div");
-  div.className = "total-dia";
-  div.innerHTML = `
-  <div style="display: flex; justify-content: space-between;">
-    <strong>${clave}</strong>
-    <span>Gs. ${totales[clave].toLocaleString()}</span>
+  <div class="acciones">
+    <button onclick="exportarExcel()">Exportar Excel</button>
+    <button onclick="window.print()">Imprimir</button>
   </div>
-`;
-  resultados.appendChild(div);
-}
 
-  }
-</script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      getDocs,
+      query,
+      orderBy
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import {
+      getAuth,
+      signInWithEmailAndPassword,
+      onAuthStateChanged,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCr0SM_u0c4aEG_tT_CXWLcvd6alZJT44c",
+      authDomain: "siondata22.firebaseapp.com",
+      projectId: "siondata22",
+      storageBucket: "siondata22.appspot.com",
+      messagingSenderId: "946379205241",
+      appId: "1:946379205241:web:0fe04a6246518451ee42a8",
+      measurementId: "G-EX6YDJYS1N"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    const loginContainer = document.getElementById("login-container");
+    const logoutBtn = document.getElementById("logout");
+    const resultados = document.getElementById("resultados");
+    const sucursalFiltro = document.getElementById("sucursalFiltro");
+    const productosCache = new Map();
+
+    // Precargar productos
+    async function precargarProductos() {
+      const snap = await getDocs(collection(db, "productos"));
+      snap.forEach(doc => productosCache.set(doc.id, doc.data()));
+    }
+
+    onAuthStateChanged(auth, async user => {
+      if (user) {
+        loginContainer.style.display = "none";
+        logoutBtn.style.display = "inline";
+        await precargarProductos();
+        mostrarTotalesPorDia();
+      } else {
+        loginContainer.style.display = "block";
+        logoutBtn.style.display = "none";
+      }
+    });
+
+    window.login = async function () {
+      const email = document.getElementById("email").value;
+      const pass = document.getElementById("password").value;
+      try {
+        await signInWithEmailAndPassword(auth, email, pass);
+      } catch (e) {
+        alert("Error de inicio de sesión: " + e.message);
+      }
+    };
+
+    logoutBtn.addEventListener("click", () => signOut(auth));
+
+    function formatearGs(num) {
+      return "Gs. " + num.toLocaleString("es-ES");
+    }
+
+    async function mostrarTotalesPorDia() {
+      resultados.innerHTML = ""; // limpiar
+      const q = query(collection(db, "pedidos"), orderBy("fecha", "desc"));
+      const pedidosSnapshot = await getDocs(q);
+
+      const data = [];
+      const sucursales = new Set();
+
+      for (const docPedido of pedidosSnapshot.docs) {
+        const pedido = docPedido.data();
+        const productos = pedido.productos || [];
+        let totalPedido = 0;
+
+        for (const p of productos) {
+          const prodData = productosCache.get(p.productoId);
+          const precio = prodData ? prodData.precio || 0 : 0;
+          totalPedido += precio * p.cantidad;
+        }
+
+        const fecha = new Date(pedido.fecha);
+        const dia = fecha.toLocaleDateString("es-ES");
+        const sucursal = pedido.sucursal || "Desconocida";
+
+        data.push({ fecha, dia, sucursal, totalPedido });
+        sucursales.add(sucursal);
+      }
+
+      // llenar combo sucursales
+      sucursalFiltro.innerHTML = '<option value="">Todas</option>';
+      sucursales.forEach(s => {
+        const opt = document.createElement("option");
+        opt.value = s;
+        opt.textContent = s;
+        sucursalFiltro.appendChild(opt);
+      });
+
+      // aplicar filtros
+      const filtroSucursal = sucursalFiltro.value;
+      const fechaInicio = document.getElementById("fechaInicio").value;
+      const fechaFin = document.getElementById("fechaFin").value;
+
+      const filtrados = data.filter(p => {
+        if (filtroSucursal && p.sucursal !== filtroSucursal) return false;
+        if (fechaInicio && p.fecha < new Date(fechaInicio)) return false;
+        if (fechaFin && p.fecha > new Date(fechaFin + "T23:59:59")) return false;
+        return true;
+      });
+
+      // construir tabla
+      let totalGeneral = 0;
+      const tabla = document.createElement("table");
+      tabla.innerHTML = `
+        <thead>
+          <tr><th>Fecha</th><th>Sucursal</th><th>Total</th></tr>
+        </thead>
+        <tbody></tbody>
+      `;
+
+      filtrados.forEach(p => {
+        totalGeneral += p.totalPedido;
+        const tr = document.createElement("tr");
+        if (Date.now() - p.fecha.getTime() < 24*60*60*1000) {
+          tr.classList.add("reciente");
+        }
+        tr.innerHTML = `
+          <td>${p.dia}</td>
+          <td>${p.sucursal}</td>
+          <td>${formatearGs(p.totalPedido)}</td>
+        `;
+        tabla.querySelector("tbody").appendChild(tr);
+      });
+
+      resultados.appendChild(tabla);
+
+      const divTotal = document.createElement("div");
+      divTotal.className = "total-dia";
+      divTotal.textContent = "Total general: " + formatearGs(totalGeneral);
+      resultados.appendChild(divTotal);
+    }
+
+    // exportar excel básico
+    window.exportarExcel = function() {
+      const tabla = document.querySelector("table");
+      if (!tabla) return alert("No hay datos para exportar");
+      let csv = "";
+      tabla.querySelectorAll("tr").forEach(row => {
+        const cols = [...row.querySelectorAll("th,td")].map(c => c.innerText);
+        csv += cols.join(";") + "\n";
+      });
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "pedidos.csv";
+      a.click();
+    }
+  </script>
 </body>
 </html>
