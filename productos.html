@@ -85,6 +85,9 @@
       <option value="tira">Tira</option>
       <option value="consumidor">Consumidor</option>
       <option value="comercial">Comercial</option>
+      <option value="velas">velas</option>
+      <option value="suplemento">suplemento</option>
+      <option value="ule">Ule</option>
     </select>
 
     <input type="number" id="peso" placeholder="Peso aprox (gr.)" min="0" step="0.01" required>
@@ -212,6 +215,9 @@
             <option value="tira" ${producto.categoria === 'tira' ? 'selected' : ''}>Tira</option>
             <option value="consumidor" ${producto.categoria === 'consumidor' ? 'selected' : ''}>Consumidor</option>
             <option value="comercial" ${producto.categoria === 'comercial' ? 'selected' : ''}>Comercial</option>
+            <option value="velas" ${producto.categoria === 'velas' ? 'selected' : ''}>velas</option>
+            <option value="suplemento" ${producto.categoria === 'suplemento' ? 'selected' : ''}>suplemento</option>
+            <option value="ule" ${producto.categoria === 'ule' ? 'selected' : ''}>ule</option>
           </select>
         </td>
         <td><input type="number" value="${producto.peso ?? ''}" min="0" step="0.01" id="peso-${producto.id}"></td>
@@ -308,4 +314,5 @@
 
 </body>
 </html>
+
 
