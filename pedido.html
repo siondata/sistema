@@ -2,26 +2,42 @@
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <title>Nuevo Pedido — Carrito</title>
+  <title>Pedidos - SION S.R.L.</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="stylesheet" href="css/pedido.css" />
   <style>
-    /* Estilos básicos (puedes mover a css/pedido.css) */
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;margin:16px;color:#111}
-    .container{display:flex;gap:20px;flex-wrap:wrap}
-    .panel{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:12px;box-shadow:0 1px 4px rgba(0,0,0,.04);flex:1 1 420px}
-    h1{margin:0 0 12px; color: rgb(202, 0, 202);}
+    :root{
+      --violeta: #810b81;  /* violeta */
+      --verde:#1b6d39;    /* verde */
+      --bg:#f8fafc;
+      --card:#ffffff;
+      --line:#e5e7eb;
+      --text:#111827;
+      --muted:#64748b;
+    }
+    *{box-sizing:border-box}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;margin:16px;background:var(--bg);color:var(--text)}
+    h1{margin:0 0 12px;color:var(--violeta)}
+    h3{margin:6px 0 8px 0;color:var(--violeta)}
+    .container{display:flex;gap:16px;flex-wrap:wrap}
+    .panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;box-shadow:0 1px 4px rgba(0,0,0,.04);flex:1 1 420px}
     label{display:block;margin-top:8px;font-weight:600}
-    input[type="text"], select, textarea, input[type="number"]{width:100%;padding:8px;margin-top:6px;border:1px solid #cbd5e1;border-radius:6px}
-    button{padding:8px 12px;border-radius:6px;border:0;background:#0ea5a4;color:white;cursor:pointer}
-    button.ghost{background:#94a3b8}
-    .row{display:flex;gap:8px;align-items:center}
+    input[type="text"], input[type="number"], select, textarea{
+      width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;outline:none
+    }
+    input:focus, select:focus, textarea:focus{border-color:var(--violeta);box-shadow:0 0 0 3px rgba(124,58,237,.15)}
+    .row{display:flex;gap:8px;align-items:end;flex-wrap:wrap}
     .row > *{flex:1}
+    .badge{display:inline-block;font-size:.8rem;padding:2px 8px;border-radius:999px;background:rgba(22,163,74,.1);color:var(--verde);border:1px solid rgba(22,163,74,.25)}
     table{width:100%;border-collapse:collapse;margin-top:12px}
     th,td{padding:8px;border-bottom:1px solid #eef2f7;text-align:left}
-    .precio-display{min-width:120px;display:inline-block}
-    .small{font-size:.9rem;color:#64748b}
-    .danger{background:#ef4444}
+    .small{font-size:.9rem;color:var(--muted)}
+    .precio-display{min-width:120px;display:inline-block;font-weight:700;color:var(--verde)}
+    button{padding:10px 12px;border-radius:10px;border:0;cursor:pointer;font-weight:600}
+    .btn-primary{background:var(--verde);color:#fff}
+    .btn-secondary{background:var(--violeta);color:#fff}
+    .btn-ghost{background:#f1f5f9;color:#111}
+    .btn-danger{background:#ef4444;color:#fff}
+    .actions{display:flex;gap:8px;justify-content:flex-end}
     #mensaje{margin-top:10px}
     @media (max-width:860px){ .container{flex-direction:column} }
   </style>
@@ -30,7 +46,7 @@
   <h1>Sion Productos</h1>
 
   <div class="container">
-    <!-- Panel izquierdo: formulario / buscador -->
+    <!-- Panel izquierdo: formulario / buscadores -->
     <div class="panel" id="panel-form">
       <form id="pedidoForm">
         <label for="sucursal">Sucursal</label>
@@ -42,32 +58,40 @@
           <option value="Sucursal GSS">Sucursal GSS</option>
         </select>
 
-        <label for="productoSelect">Buscar producto (nombre - precio)</label>
-        <input id="productoSelect" type="text" list="productosList" placeholder="Escriba para buscar..." autocomplete="off">
-        <datalist id="productosList"></datalist>
+        <div class="row" style="margin-top:8px">
+          <div>
+            <label for="productoSelect">Buscar por nombre</label>
+            <input id="productoSelect" type="text" list="productosList" placeholder="Escriba nombre..." autocomplete="off">
+            <datalist id="productosList"></datalist>
+            <div class="small">Sugerencias: <span class="badge">nombre</span> + precio</div>
+          </div>
+          <div>
+            <label for="barcodeInput">Buscar por código de barras</label>
+            <input id="barcodeInput" type="text" inputmode="numeric" placeholder="Escanee o escriba el código..." autocomplete="off">
+            <div class="small">Compatible con <span class="badge">codigoBarra</span>, <span class="badge">codigo</span>, <span class="badge">barcode</span></div>
+          </div>
+        </div>
 
-        <div style="display:flex;gap:8px;margin-top:8px;align-items:end;">
+        <div class="row" style="margin-top:8px;align-items:center">
           <div style="flex:1">
             <label class="small">Precio</label>
             <div class="precio-display" id="precioSelected">Gs. 0</div>
           </div>
-
-          <div style="width:120px">
+          <div style="width:130px">
             <label for="cantidadToAdd">Cantidad</label>
-            <input id="cantidadToAdd" type="number" min="0" value="0">
+            <input id="cantidadToAdd" type="number" min="1" value="1">
           </div>
-
-          <div style="width:150px">
-            <button type="button" id="addToCartBtn">Agregar al carrito</button>
+          <div style="width:180px">
+            <button type="button" id="addToCartBtn" class="btn-secondary">Agregar al carrito</button>
           </div>
         </div>
 
         <label for="comentarios">Comentarios</label>
         <textarea id="comentarios" rows="3" placeholder="Comentarios (opcional)"></textarea>
 
-        <div style="margin-top:12px">
-          <button id="enviarPedidoBtn" type="submit">Enviar Pedido</button>
-          <button id="limpiarBtn" type="button" class="ghost" style="margin-left:8px">Limpiar carrito</button>
+        <div style="margin-top:12px" class="row" >
+          <button id="enviarPedidoBtn" type="submit" class="btn-primary">Enviar Pedido</button>
+          <button id="limpiarBtn" type="button" class="btn-ghost">Limpiar carrito</button>
         </div>
       </form>
 
@@ -88,8 +112,8 @@
 
       <h3 id="total" style="text-align:right">Total: Gs. 0</h3>
 
-      <div style="display:flex;gap:8px;justify-content:flex-end">
-        <button id="printBtn" type="button" class="ghost">Imprimir</button>
+      <div class="actions">
+        <button id="printBtn" type="button" class="btn-ghost">Imprimir</button>
       </div>
     </div>
   </div>
@@ -98,7 +122,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCr0SM_u0c4aEG_tT_CXWLcvd6alZJT44c",
@@ -117,6 +141,7 @@
     // DOM
     const datalist = document.getElementById("productosList");
     const productoSelect = document.getElementById("productoSelect");
+    const barcodeInput = document.getElementById("barcodeInput");
     const precioSelected = document.getElementById("precioSelected");
     const cantidadToAdd = document.getElementById("cantidadToAdd");
     const addToCartBtn = document.getElementById("addToCartBtn");
@@ -129,27 +154,37 @@
     const form = document.getElementById("pedidoForm");
 
     // Datos en memoria
-    let productosDisponibles = []; // array de objetos {id,nombre,precio,stock}
+    let productosDisponibles = []; // {id,nombre,precio,stock,codigoBarra}
     const displayToProduct = new Map(); // "Nombre - Gs. 10.000" => producto
+    const barcodeToProduct = new Map(); // "789..." => producto
     let cartItems = []; // {productId,nombre,precio,cantidad}
-
-    // Estado: usuario (vendedor)
     let vendedorEmail = "";
 
-    // Redirección si no está autenticado; obtener email
+    // Sesión
     onAuthStateChanged(auth, user => {
       if (!user) {
-        // si querés redirigir al login:
         window.location.href = "index.html";
         return;
       }
       vendedorEmail = user.email || user.uid || "vendedor";
     });
 
-    // Carga productos desde Firestore y llena datalist
+    // Util: seleccionar un producto y reflejar precio/campos
+    function seleccionarProducto(prod){
+      if(!prod) return;
+      productoSelect.value = prod.nombre || "";
+      productoSelect.dataset.productId = prod.id;
+      productoSelect.dataset.precio = String(prod.precio || 0);
+      precioSelected.textContent = `Gs. ${Number(prod.precio||0).toLocaleString()}`;
+      // setear cantidad 1 por defecto si está vacía
+      if(!cantidadToAdd.value || Number(cantidadToAdd.value) < 1) cantidadToAdd.value = 1;
+    }
+
+    // Cargar productos
     async function cargarProductos() {
       productosDisponibles = [];
       displayToProduct.clear();
+      barcodeToProduct.clear();
       datalist.innerHTML = "";
       try {
         const snap = await getDocs(collection(db, "productos"));
@@ -158,15 +193,24 @@
           const nombre = String(data.nombre || "").trim();
           const precio = Number(data.precio || 0);
           const stock = Number(data.stock || 0);
-          const prod = { id: docSnap.id, nombre, precio, stock };
+          const codigoBarra = String(
+            data.codigoBarra ?? data.codigo ?? data.codBarra ?? data.barcode ?? data.bar_code ?? ""
+          ).trim();
+
+          const prod = { id: docSnap.id, nombre, precio, stock, codigoBarra };
           productosDisponibles.push(prod);
 
+          // Datalist por nombre
           const display = `${nombre} - Gs. ${precio.toLocaleString()}`;
           const opt = document.createElement("option");
           opt.value = display;
           datalist.appendChild(opt);
-          // mapear display exacto a producto (si hay duplicados, cada display será distinto si precio distinto)
           displayToProduct.set(display, prod);
+
+          // Índice por código
+          if (codigoBarra) {
+            barcodeToProduct.set(codigoBarra, prod);
+          }
         });
       } catch (err) {
         console.error("Error cargando productos:", err);
@@ -174,36 +218,62 @@
       }
     }
 
-    // Cuando se escribe en el input: detectar selección válida y mostrar precio
+    // Buscar por nombre (datalist)
     productoSelect.addEventListener("input", () => {
       const texto = productoSelect.value.trim();
       let prod = null;
 
-      // si coincide con la cadena mostrada (Nombre - Gs. ...)
       if (displayToProduct.has(texto)) {
         prod = displayToProduct.get(texto);
       } else {
-        // si escribió solo el nombre y existe UNO con ese nombre, tomarlo (si hay varios, no elegir)
         const matches = productosDisponibles.filter(p => p.nombre.toLowerCase() === texto.toLowerCase());
         if (matches.length === 1) prod = matches[0];
       }
 
       if (prod) {
-        // guardar selección inequívoca en dataset del input
-        productoSelect.value = prod.nombre; // mostrar solo nombre
-        productoSelect.dataset.productId = prod.id;
-        productoSelect.dataset.precio = String(prod.precio);
-        precioSelected.textContent = `Gs. ${prod.precio.toLocaleString()}`;
+        seleccionarProducto(prod);
       } else {
-        // no válido
         delete productoSelect.dataset.productId;
         delete productoSelect.dataset.precio;
         precioSelected.textContent = `Gs. 0`;
       }
     });
 
-    // Añadir al carrito
-    addToCartBtn.addEventListener("click", () => {
+    // Buscar por código de barras
+    function intentarMatchPorCodigo(valor){
+      const code = String(valor || "").trim();
+      if(!code) return null;
+
+      // match exacto
+      if (barcodeToProduct.has(code)) {
+        return barcodeToProduct.get(code);
+      }
+      // match tolerante (si el escáner agrega sufijo/prefijo)
+      const candidato = Array.from(barcodeToProduct.keys()).find(k => k && (code.includes(k) || k.includes(code)));
+      return candidato ? barcodeToProduct.get(candidato) : null;
+    }
+
+    barcodeInput.addEventListener("input", () => {
+      const prod = intentarMatchPorCodigo(barcodeInput.value);
+      if (prod) seleccionarProducto(prod);
+    });
+
+    barcodeInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const prod = intentarMatchPorCodigo(barcodeInput.value);
+        if (prod) {
+          seleccionarProducto(prod);
+          // si ya tenemos producto y cantidad válida, permitir agregar rápido
+          if (Number(cantidadToAdd.value) > 0) addToCart();
+        } else {
+          mensaje.textContent = "Código no encontrado.";
+        }
+      }
+    });
+
+    // Agregar al carrito (función + botón)
+    function addToCart(){
       mensaje.textContent = "";
       const nombre = productoSelect.value.trim();
       const productId = productoSelect.dataset.productId || "";
@@ -211,7 +281,7 @@
       const cantidad = parseInt(cantidadToAdd.value) || 0;
 
       if (!productId || !nombre) {
-        mensaje.textContent = "Seleccione un producto válido desde la lista (Nombre - Gs. Precio).";
+        mensaje.textContent = "Seleccione un producto válido por nombre o código.";
         return;
       }
       if (cantidad <= 0) {
@@ -219,7 +289,6 @@
         return;
       }
 
-      // verificar stock actual desde productosDisponibles
       const prodInfo = productosDisponibles.find(p => p.id === productId);
       if (!prodInfo) {
         mensaje.textContent = "Producto no válido (recargue la página).";
@@ -232,39 +301,38 @@
         return;
       }
 
-      if (existente) {
-        existente.cantidad += cantidad;
-      } else {
-        cartItems.push({ productId, nombre, precio, cantidad });
-      }
+      if (existente) existente.cantidad += cantidad;
+      else cartItems.push({ productId, nombre, precio, cantidad });
 
       // limpiar selección
       productoSelect.value = "";
+      barcodeInput.value = "";
       delete productoSelect.dataset.productId;
       delete productoSelect.dataset.precio;
       precioSelected.textContent = `Gs. 0`;
       cantidadToAdd.value = 1;
 
       renderCart();
-    });
+    }
 
-    // Renderizar carrito en tabla
+    addToCartBtn.addEventListener("click", addToCart);
+
+    // Render carrito
     function renderCart() {
       cartTableBody.innerHTML = "";
       let total = 0;
       let count = 0;
       cartItems.forEach(item => {
         const subtotal = item.precio * item.cantidad;
-        total += subtotal;
-        count += item.cantidad;
+        total += subtotal; count += item.cantidad;
 
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${item.nombre}</td>
           <td>Gs. ${Number(item.precio).toLocaleString()}</td>
-          <td><input type="number" min="1" value="${item.cantidad}" data-product-id="${item.productId}" class="qty-input" style="width:80px;padding:6px;border-radius:6px;border:1px solid #cbd5e1"></td>
+          <td><input type="number" min="1" value="${item.cantidad}" data-product-id="${item.productId}" class="qty-input" style="width:90px;padding:8px;border-radius:10px;border:1px solid #cbd5e1"></td>
           <td>Gs. ${subtotal.toLocaleString()}</td>
-          <td><button class="remove-btn" data-product-id="${item.productId}" title="Eliminar">🗑️</button></td>
+          <td><button class="btn-danger remove-btn" data-product-id="${item.productId}" title="Eliminar">🗑️</button></td>
         `;
         cartTableBody.appendChild(tr);
       });
@@ -272,9 +340,9 @@
       totalEl.textContent = `Total: Gs. ${total.toLocaleString()}`;
       cartCountEl.textContent = `${count} ítems`;
 
-      // agregar listeners para qty changes y remove
+      // qty change / remove
       document.querySelectorAll(".qty-input").forEach(input => {
-        input.addEventListener("change", (e) => {
+        input.addEventListener("change", () => {
           const pid = input.dataset.productId;
           let newQty = parseInt(input.value) || 1;
           if (newQty < 1) newQty = 1;
@@ -308,14 +376,14 @@
       mensaje.textContent = "Carrito limpiado.";
     });
 
-    // Imprimir resumen simple
+    // Imprimir (simple)
     printBtn.addEventListener("click", () => {
       const win = window.open("", "_blank");
       const rowsHtml = cartItems.map(it => `<tr><td>${it.nombre}</td><td>${it.cantidad}</td><td>Gs. ${it.precio.toLocaleString()}</td><td>Gs. ${(it.precio*it.cantidad).toLocaleString()}</td></tr>`).join("");
       const total = cartItems.reduce((s,it)=>s+it.precio*it.cantidad,0);
       win.document.write(`
         <html><head><title>Ticket</title></head><body>
-        <h2>Pedido - ${new Date().toLocaleString()}</h2>
+        <h2 style="color:#7c3aed">Pedido - ${new Date().toLocaleString()}</h2>
         <table border="1" cellpadding="6" cellspacing="0">
         <tr><th>Producto</th><th>Cantidad</th><th>Precio U.</th><th>Subtotal</th></tr>
         ${rowsHtml}
@@ -327,7 +395,7 @@
       win.print();
     });
 
-    // Enviar pedido a Firestore
+    // Enviar pedido
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       mensaje.textContent = "";
@@ -335,25 +403,13 @@
       const sucursal = document.getElementById("sucursal").value;
       const comentarios = document.getElementById("comentarios").value;
 
-      if (!sucursal) {
-        mensaje.textContent = "Seleccione una sucursal.";
-        return;
-      }
-      if (cartItems.length === 0) {
-        mensaje.textContent = "El carrito está vacío.";
-        return;
-      }
+      if (!sucursal) { mensaje.textContent = "Seleccione una sucursal."; return; }
+      if (cartItems.length === 0) { mensaje.textContent = "El carrito está vacío."; return; }
 
-      // Validar stock actual desde Firestore antes de enviar (para evitar race conditions)
       try {
-        // Recopilar ids y leer docs
-        const productIds = cartItems.map(it => it.productId);
-        const docsPromises = productIds.map(id => getDoc(doc(db, "productos", id)));
-        const snaps = await Promise.all(docsPromises);
-
-        // Verificar stock
+        // Verificación de stock en tiempo real
         for (const it of cartItems) {
-          const snap = snaps.find(s => s.id === it.productId);
+          const snap = await getDoc(doc(db, "productos", it.productId));
           const currentStock = Number(snap?.data()?.stock ?? 0);
           if (it.cantidad > currentStock) {
             mensaje.textContent = `Stock insuficiente para ${it.nombre}. Disponible: ${currentStock}`;
@@ -361,8 +417,6 @@
           }
         }
 
-        // Guardar pedido y actualizar stocks en batch (atomicidad parcial)
-        // Nota: Firestore batched writes limit = 500 operations; aquí será pequeño
         const pedidoObj = {
           fecha: new Date().toISOString(),
           sucursal,
@@ -373,31 +427,29 @@
           estado: "pendiente"
         };
 
-        // 1) Crear doc pedido
-        const pedidoRef = await addDoc(collection(db, "pedidos"), pedidoObj);
+        await addDoc(collection(db, "pedidos"), pedidoObj);
 
-        // 2) Actualizar stock por cada producto
-        // Usamos updateDoc secuencial (podés usar batched writes si preferís)
+        // Descontar stock
         for (const it of cartItems) {
           const prodRef = doc(db, "productos", it.productId);
           const snap = await getDoc(prodRef);
           const currentStock = Number(snap.data().stock || 0);
-          const nuevoStock = currentStock - it.cantidad;
-          await updateDoc(prodRef, { stock: nuevoStock });
+          await updateDoc(prodRef, { stock: currentStock - it.cantidad });
         }
 
         mensaje.textContent = "✅ Pedido enviado correctamente.";
         cartItems = [];
         renderCart();
         form.reset();
-        await cargarProductos(); // recargar stocks y lista
+        precioSelected.textContent = `Gs. 0`;
+        await cargarProductos();
       } catch (err) {
-        console.error("Error enviando pedido:", err);
+        console.error("Error al enviar pedido:", err);
         mensaje.textContent = "❌ Error al enviar pedido. Revisa la consola.";
       }
     });
 
-    // Inicialización
+    // Init
     (async function init(){
       await cargarProductos();
       renderCart();
@@ -405,3 +457,4 @@
   </script>
 </body>
 </html>
+
