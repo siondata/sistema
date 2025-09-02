@@ -1,69 +1,84 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Recepción de Pedidos</title>
-  <link rel="stylesheet" href="css/estilos.css">
+  <meta charset="UTF-8" />
+  <title>Depósito - Totales por Pedido</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    h1 { color: #333; }
-    #filtros { margin-bottom: 20px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-    th, td { padding: 8px; border: 1px solid #ddd; text-align: left; }
-    th { background: #f4f4f4; }
-    tr.reciente { background: #e6ffe6; }
-    .total-dia { font-weight: bold; margin-top: 10px; }
-    .acciones { margin-top: 15px; }
-    button { margin-right: 8px; }
+    :root {
+      --verde:#16a34a;
+      --violeta:#7c3aed;
+      --gris:#f8fafc;
+      --borde:#e5e7eb;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background:#fff;
+      color:#111;
+    }
+    header {
+      position: sticky; top:0; z-index:10;
+      background:#fff; padding:12px 20px;
+      border-bottom:1px solid var(--borde);
+    }
+    h1 { color:var(--violeta); margin:0 0 8px; }
+    .filtros { display:flex; gap:8px; flex-wrap:wrap; }
+    input,select,button {
+      padding:6px 10px; border:1px solid var(--borde); border-radius:6px;
+    }
+    button { cursor:pointer; font-weight:600; }
+    .btn-green{background:var(--verde);color:#fff;border:0;}
+    .btn-purple{background:var(--violeta);color:#fff;border:0;}
+    .contenedor { padding:20px; max-width:900px; margin:auto; }
+    .pedido {
+      border:1px solid var(--borde);
+      border-radius:10px;
+      padding:12px;
+      margin-bottom:16px;
+      background:#fff;
+      box-shadow:0 1px 3px rgba(0,0,0,.05);
+    }
+    .pedido.reciente { background:#ecfdf5; border-left:5px solid var(--verde); }
+    .pedido.ayer { background:#f5f3ff; border-left:5px solid var(--violeta); }
+    h3 { margin:0 0 8px; color:var(--violeta); }
+    .total { font-weight:bold; color:var(--verde); }
+    #resumen {
+      background:var(--gris); padding:12px;
+      border-radius:8px; margin-bottom:20px;
+    }
+    #resumen h2{margin-top:0;color:var(--verde);}
+    .acciones { display:flex; gap:8px; margin-top:12px; }
+    .estado-select { margin-top:6px; }
   </style>
 </head>
 <body>
-  <button id="logout" style="display:none;">Cerrar sesión</button> 
-  <h1>Recepción de Pedidos</h1>
+  <header>
+    <h1>Totales de Pedidos - SION S.R.L</h1>
+    <div class="filtros">
+      <input type="text" id="filtroSucursal" placeholder="Sucursal..." />
+      <input type="date" id="filtroFecha" />
+      <div class="acciones">
+        <button class="btn-green" onclick="window.print()">🖨️ Imprimir</button>
+        <button class="btn-purple" onclick="exportarPDF()">⬇️ Exportar PDF</button>
+      </div>
+    </div>
+  </header>
 
-  <div id="login-container" style="display:none;">
-    <input id="email" type="email" placeholder="Correo">
-    <input id="password" type="password" placeholder="Contraseña">
-    <button id="loginBtn" onclick="login()">Iniciar sesión</button>
+  <div class="contenedor">
+    <div id="resumen"></div>
+    <div id="contenedor"></div>
+    <div id="totalGeneral"></div>
   </div>
 
-  <!-- Filtros -->
-  <div id="filtros">
-    <label for="sucursalFiltro">Sucursal:</label>
-    <select id="sucursalFiltro">
-      <option value="">Todas</option>
-    </select>
-
-    <label for="fechaInicio">Desde:</label>
-    <input type="date" id="fechaInicio">
-    <label for="fechaFin">Hasta:</label>
-    <input type="date" id="fechaFin">
-
-    <button onclick="mostrarTotalesPorDia()">Aplicar Filtros</button>
-  </div>
-
-  <!-- Resultados -->
-  <div id="resultados"></div>
-  <div class="acciones">
-    <button onclick="exportarExcel()">Exportar Excel</button>
-    <button onclick="window.print()">Imprimir</button>
-  </div>
+  <!-- jsPDF para exportar PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import {
-      getFirestore,
-      collection,
-      getDocs,
-      query,
-      orderBy
+      getFirestore, collection, getDocs, doc, query, orderBy, updateDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-    import {
-      getAuth,
-      signInWithEmailAndPassword,
-      onAuthStateChanged,
-      signOut
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCr0SM_u0c4aEG_tT_CXWLcvd6alZJT44c",
@@ -71,150 +86,153 @@
       projectId: "siondata22",
       storageBucket: "siondata22.appspot.com",
       messagingSenderId: "946379205241",
-      appId: "1:946379205241:web:0fe04a6246518451ee42a8",
-      measurementId: "G-EX6YDJYS1N"
+      appId: "1:946379205241:web:0fe04a6246518451ee42a8"
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
 
-    const loginContainer = document.getElementById("login-container");
-    const logoutBtn = document.getElementById("logout");
-    const resultados = document.getElementById("resultados");
-    const sucursalFiltro = document.getElementById("sucursalFiltro");
-    const productosCache = new Map();
+    const contenedor = document.getElementById("contenedor");
+    const resumen = document.getElementById("resumen");
+    const totalGeneralEl = document.getElementById("totalGeneral");
 
-    // Precargar productos
-    async function precargarProductos() {
-      const snap = await getDocs(collection(db, "productos"));
-      snap.forEach(doc => productosCache.set(doc.id, doc.data()));
-    }
+    const filtroSucursal = document.getElementById("filtroSucursal");
+    const filtroFecha = document.getElementById("filtroFecha");
+
+    let pedidosHTML = [];
+    let mapaPrecios = {}; // 👈 aquí guardamos los precios de productos
 
     onAuthStateChanged(auth, async user => {
       if (user) {
-        loginContainer.style.display = "none";
-        logoutBtn.style.display = "inline";
-        await precargarProductos();
-        mostrarTotalesPorDia();
-      } else {
-        loginContainer.style.display = "block";
-        logoutBtn.style.display = "none";
+        await cargarProductos();   // primero cargar todos los productos
+        await cargarPedidos();     // luego cargar pedidos
       }
     });
 
-    window.login = async function () {
-      const email = document.getElementById("email").value;
-      const pass = document.getElementById("password").value;
-      try {
-        await signInWithEmailAndPassword(auth, email, pass);
-      } catch (e) {
-        alert("Error de inicio de sesión: " + e.message);
-      }
-    };
-
-    logoutBtn.addEventListener("click", () => signOut(auth));
-
-    function formatearGs(num) {
-      return "Gs. " + num.toLocaleString("es-ES");
+    async function cargarProductos() {
+      const productosSnap = await getDocs(collection(db, "productos"));
+      productosSnap.forEach(d => {
+        mapaPrecios[d.id] = d.data().precio || 0;
+      });
     }
 
-    async function mostrarTotalesPorDia() {
-      resultados.innerHTML = ""; // limpiar
+    async function cargarPedidos() {
+      contenedor.innerHTML = "<p>Cargando pedidos...</p>";
       const q = query(collection(db, "pedidos"), orderBy("fecha", "desc"));
       const pedidosSnapshot = await getDocs(q);
+      const resumenSucursal = {};
+      pedidosHTML = [];
+      contenedor.innerHTML = "";
 
-      const data = [];
-      const sucursales = new Set();
+      let totalGeneral = 0;
 
       for (const docPedido of pedidosSnapshot.docs) {
         const pedido = docPedido.data();
         const productos = pedido.productos || [];
-        let totalPedido = 0;
+        let total = 0;
 
+        // ahora usamos el mapa de precios en memoria
         for (const p of productos) {
-          const prodData = productosCache.get(p.productoId);
-          const precio = prodData ? prodData.precio || 0 : 0;
-          totalPedido += precio * p.cantidad;
+          const precio = mapaPrecios[p.productoId] || 0;
+          total += precio * p.cantidad;
         }
 
-        const fecha = new Date(pedido.fecha);
-        const dia = fecha.toLocaleDateString("es-ES");
-        const sucursal = pedido.sucursal || "Desconocida";
+        const fechaPedido = new Date(pedido.fecha);
+        const hoy = new Date();
+        let clase = "";
+        if (fechaPedido.toDateString() === hoy.toDateString()) clase = "reciente";
+        else if (fechaPedido.toDateString() === new Date(hoy.setDate(hoy.getDate()-1)).toDateString()) clase = "ayer";
 
-        data.push({ fecha, dia, sucursal, totalPedido });
-        sucursales.add(sucursal);
+        const estado = pedido.estado || "pendiente";
+        const estadoSelect = `
+          <label>Estado:
+            <select class="estado-select" data-id="${docPedido.id}">
+              <option value="pendiente" ${estado === "pendiente" ? "selected" : ""}>Pendiente</option>
+              <option value="preparando" ${estado === "preparando" ? "selected" : ""}>Preparando</option>
+              <option value="enviado" ${estado === "enviado" ? "selected" : ""}>Enviado</option>
+            </select>
+          </label>
+        `;
+
+        const div = document.createElement("div");
+        div.className = "pedido " + clase;
+        div.dataset.sucursal = (pedido.sucursal||"").toLowerCase();
+        div.dataset.fecha = fechaPedido.toISOString().split("T")[0];
+        div.innerHTML = `
+          <h3>${pedido.sucursal} - ${fechaPedido.toLocaleString()}</h3>
+          ${estadoSelect}
+          <div class="total">Total Pedido: Gs. ${total.toLocaleString()}</div>
+        `;
+        contenedor.appendChild(div);
+        pedidosHTML.push(div);
+
+        resumenSucursal[pedido.sucursal] = (resumenSucursal[pedido.sucursal]||0)+total;
+        totalGeneral += total;
       }
 
-      // llenar combo sucursales
-      sucursalFiltro.innerHTML = '<option value="">Todas</option>';
-      sucursales.forEach(s => {
-        const opt = document.createElement("option");
-        opt.value = s;
-        opt.textContent = s;
-        sucursalFiltro.appendChild(opt);
-      });
-
-      // aplicar filtros
-      const filtroSucursal = sucursalFiltro.value;
-      const fechaInicio = document.getElementById("fechaInicio").value;
-      const fechaFin = document.getElementById("fechaFin").value;
-
-      const filtrados = data.filter(p => {
-        if (filtroSucursal && p.sucursal !== filtroSucursal) return false;
-        if (fechaInicio && p.fecha < new Date(fechaInicio)) return false;
-        if (fechaFin && p.fecha > new Date(fechaFin + "T23:59:59")) return false;
-        return true;
-      });
-
-      // construir tabla
-      let totalGeneral = 0;
-      const tabla = document.createElement("table");
-      tabla.innerHTML = `
-        <thead>
-          <tr><th>Fecha</th><th>Sucursal</th><th>Total</th></tr>
-        </thead>
-        <tbody></tbody>
-      `;
-
-      filtrados.forEach(p => {
-        totalGeneral += p.totalPedido;
-        const tr = document.createElement("tr");
-        if (Date.now() - p.fecha.getTime() < 24*60*60*1000) {
-          tr.classList.add("reciente");
-        }
-        tr.innerHTML = `
-          <td>${p.dia}</td>
-          <td>${p.sucursal}</td>
-          <td>${formatearGs(p.totalPedido)}</td>
-        `;
-        tabla.querySelector("tbody").appendChild(tr);
-      });
-
-      resultados.appendChild(tabla);
-
-      const divTotal = document.createElement("div");
-      divTotal.className = "total-dia";
-      divTotal.textContent = "Total general: " + formatearGs(totalGeneral);
-      resultados.appendChild(divTotal);
+      generarResumen(resumenSucursal);
+      totalGeneralEl.textContent = "🔢 Total General: Gs. " + totalGeneral.toLocaleString();
+      agregarListenersEstado();
     }
 
-    // exportar excel básico
-    window.exportarExcel = function() {
-      const tabla = document.querySelector("table");
-      if (!tabla) return alert("No hay datos para exportar");
-      let csv = "";
-      tabla.querySelectorAll("tr").forEach(row => {
-        const cols = [...row.querySelectorAll("th,td")].map(c => c.innerText);
-        csv += cols.join(";") + "\n";
+    function generarResumen(resumenSucursal) {
+      resumen.innerHTML = "<h2>Resumen por Sucursal</h2><ul>" +
+        Object.entries(resumenSucursal).map(([suc, total]) =>
+          `<li>${suc}: <strong>Gs. ${total.toLocaleString()}</strong></li>`).join("") +
+        "</ul>";
+    }
+
+    function agregarListenersEstado() {
+      document.querySelectorAll(".estado-select").forEach(select => {
+        select.addEventListener("change", async () => {
+          const id = select.dataset.id;
+          const estado = select.value;
+          await updateDoc(doc(db, "pedidos", id), { estado });
+          select.style.background = (estado==="enviado"? "#bbf7d0" : estado==="preparando"? "#ede9fe":"#fff");
+        });
       });
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "pedidos.csv";
-      a.click();
+    }
+
+    filtroSucursal.addEventListener("input", filtrar);
+    filtroFecha.addEventListener("change", filtrar);
+
+    function filtrar() {
+      const suc = filtroSucursal.value.toLowerCase();
+      const fecha = filtroFecha.value;
+      pedidosHTML.forEach(div => {
+        const coincideSucursal = div.dataset.sucursal.includes(suc);
+        const coincideFecha = !fecha || div.dataset.fecha === fecha;
+        div.style.display = coincideSucursal && coincideFecha ? "" : "none";
+      });
+    }
+
+    // Exportar a PDF en vez de Excel
+    window.exportarPDF = function() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      doc.setFontSize(16);
+      doc.text("Resumen de Pedidos - SION S.R.L", 14, 20);
+      doc.setFontSize(10);
+      doc.text("Generado: " + new Date().toLocaleString(), 14, 28);
+
+      let y = 40;
+      doc.setFontSize(12);
+      doc.text("Totales por Sucursal:", 14, y);
+
+      document.querySelectorAll("#resumen li").forEach(li => {
+        y += 8;
+        doc.text(li.innerText, 20, y);
+      });
+
+      y += 12;
+      doc.setFontSize(14);
+      doc.text(document.getElementById("totalGeneral").textContent, 14, y);
+
+      doc.save("resumen_pedidos.pdf");
     }
   </script>
 </body>
 </html>
+
