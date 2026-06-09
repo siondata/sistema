@@ -1,7 +1,19 @@
-// js/login.js
-import { auth, db } from './firebase-config.js';
-import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCr0SM_u0c4aEG_tT_CXWLcvd6alZJT44c",
+  authDomain: "siondata22.firebaseapp.com",
+  projectId: "siondata22",
+  storageBucket: "siondata22.appspot.com",
+  messagingSenderId: "946379205241",
+  appId: "1:946379205241:web:0fe04a6246518451ee42a8"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('login-form');
@@ -9,7 +21,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-
     const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
 
@@ -25,20 +36,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       const credencial = await signInWithEmailAndPassword(auth, email, password);
-      const uid = credencial.user.uid;
+      const snap = await getDoc(doc(db, "usuarios", credencial.user.uid));
 
-      // Leer el rol del usuario desde Firestore
-      const snap = await getDoc(doc(db, "usuarios", uid));
       if (!snap.exists()) {
         throw new Error("Usuario no registrado en el sistema. Contactá al administrador.");
       }
 
       mensaje.textContent = "✅ Sesión iniciada. Redirigiendo...";
       mensaje.style.color = "green";
-
-      setTimeout(() => {
-        window.location.href = "dashboard.html";
-      }, 800);
+      setTimeout(() => { window.location.href = "dashboard.html"; }, 800);
 
     } catch (error) {
       let msg = "Error al iniciar sesión.";
