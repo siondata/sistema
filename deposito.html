@@ -8,7 +8,6 @@
 </head>
 <body>
 
-  <!-- NAV -->
   <nav class="nav-bar">
     <a href="dashboard.html" class="nav-btn verde">← Volver</a>
     <span class="brand">Depósito</span>
@@ -17,7 +16,6 @@
     <button class="nav-btn rojo" id="logoutBtn">Salir</button>
   </nav>
 
-  <!-- FILTROS -->
   <div class="filtros">
     <input type="text" id="filtroSucursal" placeholder="Filtrar sucursal..." />
     <input type="date" id="filtroFecha" />
@@ -30,9 +28,22 @@
   </div>
 
   <script type="module">
-    import { auth, db } from './js/firebase-config.js';
-    import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { doc, getDoc, collection, getDocs, query, orderBy, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, doc, getDoc, collection, getDocs, query, orderBy, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCr0SM_u0c4aEG_tT_CXWLcvd6alZJT44c",
+      authDomain: "siondata22.firebaseapp.com",
+      projectId: "siondata22",
+      storageBucket: "siondata22.appspot.com",
+      messagingSenderId: "946379205241",
+      appId: "1:946379205241:web:0fe04a6246518451ee42a8"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
     document.getElementById("logoutBtn").addEventListener("click", () => {
       signOut(auth).then(() => window.location.href = "index.html");
