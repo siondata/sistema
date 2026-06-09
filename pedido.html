@@ -1,30 +1,181 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mis Pedidos — Sion S.R.L.</title>
+  <meta charset="utf-8" />
+  <title>Hacer Pedido — Sion S.R.L.</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link rel="stylesheet" href="css/estilos.css" />
+  <style>
+    /* Estilos específicos del pedido */
+    .container { display:flex; gap:14px; flex-wrap:wrap; }
+    .panel {
+      background:#fff;
+      border:1.5px solid var(--verde-borde);
+      border-radius:var(--radio-lg);
+      padding:14px;
+      box-shadow:var(--sombra);
+      flex:1 1 380px;
+    }
+
+    .row { display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; }
+    .row > * { flex:1; }
+
+    .precio-display {
+      font-size:1rem;
+      font-weight:700;
+      color:var(--verde);
+      padding:7px 0;
+      display:inline-block;
+    }
+
+    .sucursal-badge {
+      display:inline-block;
+      background:var(--fondo);
+      border:1.5px solid var(--verde-borde);
+      border-radius:var(--radio);
+      padding:7px 12px;
+      font-weight:700;
+      color:var(--verde-oscuro);
+      font-size:0.9rem;
+      width:100%;
+    }
+
+    /* Carrito */
+    #cartTable tbody tr:hover td { background:var(--fondo-blanco); }
+    .qty-input {
+      width:70px !important;
+      padding:5px 6px !important;
+      text-align:center;
+    }
+    .btn-danger {
+      background:#ef4444;
+      color:#fff;
+      padding:4px 8px;
+      border-radius:var(--radio);
+      border:none;
+      cursor:pointer;
+      font-size:0.8rem;
+    }
+    .btn-danger:hover { background:#b91c1c; }
+
+    #total {
+      text-align:right;
+      font-size:1rem;
+      font-weight:700;
+      color:var(--verde-oscuro);
+      margin-top:10px;
+    }
+
+    .actions { display:flex; gap:8px; justify-content:flex-end; margin-top:10px; }
+
+    @media (max-width:800px) { .container { flex-direction:column; } }
+  </style>
 </head>
 <body>
 
+  <!-- NAV -->
   <nav class="nav-bar">
     <a href="dashboard.html" class="nav-btn verde">← Volver</a>
-    <span class="brand">Mis Pedidos</span>
+    <span class="brand">Hacer Pedido</span>
     <div class="nav-spacer"></div>
     <span class="badge verde" id="badge-sucursal">...</span>
     <button class="nav-btn rojo" id="logoutBtn">Salir</button>
   </nav>
 
   <div class="contenedor" style="padding-top:14px">
-    <div id="loading" class="sin-datos"><span>⏳</span>Cargando pedidos...</div>
-    <div id="lista"></div>
+    <div class="container">
+
+      <!-- Panel izquierdo: formulario -->
+      <div class="panel">
+        <h2 style="margin-bottom:12px">Nuevo Pedido</h2>
+        <form id="pedidoForm">
+
+          <!-- Sucursal (automática o select según rol) -->
+          <label>Sucursal</label>
+          <div id="sucursal-auto" class="sucursal-badge" style="display:none"></div>
+          <select id="sucursal" style="display:none">
+            <option value="">Seleccione una sucursal</option>
+            <option value="Sucursal KM5">Sucursal KM5</option>
+            <option value="Sucursal KM7">Sucursal KM7</option>
+            <option value="Sucursal KM8">Sucursal KM8</option>
+            <option value="Sucursal GSS">Sucursal GSS</option>
+          </select>
+
+          <!-- Buscadores -->
+          <div class="row" style="margin-top:10px">
+            <div>
+              <label for="productoSelect">Buscar por nombre</label>
+              <input id="productoSelect" type="text" list="productosList" placeholder="Escriba nombre..." autocomplete="off">
+              <datalist id="productosList"></datalist>
+            </div>
+            <div>
+              <label for="barcodeInput">Código de barras</label>
+              <input id="barcodeInput" type="text" inputmode="numeric" placeholder="Escanee o escriba..." autocomplete="off">
+            </div>
+          </div>
+
+          <!-- Precio + cantidad -->
+          <div class="row" style="margin-top:10px;align-items:center">
+            <div>
+              <label style="font-size:0.75rem;color:var(--texto-suave)">Precio</label>
+              <div class="precio-display" id="precioSelected">Gs. 0</div>
+            </div>
+            <div style="max-width:110px">
+              <label for="cantidadToAdd">Cantidad</label>
+              <input id="cantidadToAdd" type="number" min="1" value="1">
+            </div>
+            <div style="max-width:160px;padding-bottom:0">
+              <label style="visibility:hidden;font-size:0.78rem">-</label>
+              <button type="button" id="addToCartBtn" class="btn-magenta" style="width:100%;padding:8px">＋ Agregar</button>
+            </div>
+          </div>
+
+          <label for="comentarios" style="margin-top:12px">Comentarios</label>
+          <textarea id="comentarios" rows="3" placeholder="Comentarios (opcional)"></textarea>
+
+          <div class="row" style="margin-top:12px">
+            <button id="enviarPedidoBtn" type="submit" class="btn-verde" style="padding:10px">✅ Enviar Pedido</button>
+            <button id="limpiarBtn" type="button" class="btn-ghost" style="padding:10px">🗑️ Limpiar</button>
+          </div>
+        </form>
+
+        <p id="mensaje" style="margin-top:10px;font-size:0.85rem;min-height:18px"></p>
+      </div>
+
+      <!-- Panel derecho: carrito -->
+      <div class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <h2>Carrito</h2>
+          <span class="badge verde" id="cartCount">0 ítems</span>
+        </div>
+
+        <table id="cartTable">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Precio U.</th>
+              <th>Cant.</th>
+              <th>Subtotal</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+
+        <p id="total">Total: Gs. 0</p>
+
+        <div class="actions">
+          <button id="printBtn" type="button" class="btn-ghost" style="padding:7px 14px">🖨️ Imprimir ticket</button>
+        </div>
+      </div>
+
+    </div>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, doc, getDoc, collection, query, where, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCr0SM_u0c4aEG_tT_CXWLcvd6alZJT44c",
@@ -39,88 +190,331 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    document.getElementById("logoutBtn").addEventListener("click", () => {
-      signOut(auth).then(() => window.location.href = "index.html");
-    });
+    // DOM
+    const datalist        = document.getElementById("productosList");
+    const productoSelect  = document.getElementById("productoSelect");
+    const barcodeInput    = document.getElementById("barcodeInput");
+    const precioSelected  = document.getElementById("precioSelected");
+    const cantidadToAdd   = document.getElementById("cantidadToAdd");
+    const addToCartBtn    = document.getElementById("addToCartBtn");
+    const cartTableBody   = document.querySelector("#cartTable tbody");
+    const totalEl         = document.getElementById("total");
+    const cartCountEl     = document.getElementById("cartCount");
+    const mensaje         = document.getElementById("mensaje");
+    const limpiarBtn      = document.getElementById("limpiarBtn");
+    const printBtn        = document.getElementById("printBtn");
+    const form            = document.getElementById("pedidoForm");
+    const sucursalSelect  = document.getElementById("sucursal");
+    const sucursalAuto    = document.getElementById("sucursal-auto");
+    const badgeSucursal   = document.getElementById("badge-sucursal");
 
+    let productosDisponibles = [];
+    const displayToProduct = new Map();
+    const barcodeToProduct = new Map();
+    let cartItems = [];
+    let vendedorEmail = "";
+    let sucursalFija = ""; // para usuarios de sucursal
+
+    // ── Auth ──
     onAuthStateChanged(auth, async (user) => {
       if (!user) { window.location.href = "index.html"; return; }
+      vendedorEmail = user.email || user.uid;
 
+      // Leer rol desde Firestore
       const snap = await getDoc(doc(db, "usuarios", user.uid));
       if (!snap.exists()) { await signOut(auth); window.location.href = "index.html"; return; }
 
       const datos = snap.data();
-      document.getElementById("badge-sucursal").textContent = datos.sucursal || datos.rol;
-      await cargarPedidos(datos.sucursal, datos.rol === "admin");
-    });
 
-    async function cargarPedidos(sucursal, esAdmin) {
-      const lista = document.getElementById("lista");
-      const loading = document.getElementById("loading");
-
-      const productosSnap = await getDocs(collection(db, "productos"));
-      const precios = {};
-      productosSnap.forEach(d => { precios[d.id] = d.data().precio || 0; });
-
-      const q = esAdmin
-        ? query(collection(db, "pedidos"), orderBy("fecha", "desc"))
-        : query(collection(db, "pedidos"), where("sucursal", "==", sucursal), orderBy("fecha", "desc"));
-
-      const pedidosSnap = await getDocs(q);
-      loading.remove();
-
-      if (pedidosSnap.empty) {
-        lista.innerHTML = `<div class="sin-datos"><span>📋</span>No hay pedidos registrados aún.</div>`;
-        return;
+      if (datos.rol === "admin") {
+        // Admin puede elegir sucursal
+        sucursalSelect.style.display = "block";
+        sucursalAuto.style.display = "none";
+        badgeSucursal.textContent = "Admin";
+      } else {
+        // Sucursal fija automática
+        sucursalFija = datos.sucursal || "";
+        const label = "Sucursal " + sucursalFija.toUpperCase();
+        sucursalAuto.textContent = label;
+        sucursalAuto.style.display = "block";
+        sucursalSelect.style.display = "none";
+        badgeSucursal.textContent = sucursalFija.toUpperCase();
       }
 
-      pedidosSnap.forEach(docPedido => {
-        const pedido = docPedido.data();
-        const productos = pedido.productos || [];
-        const fecha = new Date(pedido.fecha);
-        const estado = pedido.estado || "pendiente";
-        let total = 0;
+      await cargarProductos();
+      renderCart();
+    });
 
-        const filas = productos.map(p => {
-          const precio = precios[p.productoId] || 0;
-          const sub = precio * p.cantidad;
-          total += sub;
-          return `<tr>
-            <td>${p.nombre}</td>
-            <td style="text-align:center">${p.cantidad}</td>
-            <td style="text-align:right">Gs. ${precio.toLocaleString()}</td>
-            <td style="text-align:right">Gs. ${sub.toLocaleString()}</td>
-          </tr>`;
-        }).join("");
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      signOut(auth).then(() => window.location.href = "index.html");
+    });
 
-        const etiqEstado = {
-          pendiente:  "⏳ Pendiente",
-          preparando: "🔧 Preparando",
-          enviado:    "✅ Enviado"
-        }[estado] || estado;
+    // ── Cargar productos ──
+    async function cargarProductos() {
+      productosDisponibles = [];
+      displayToProduct.clear();
+      barcodeToProduct.clear();
+      datalist.innerHTML = "";
 
-        const div = document.createElement("div");
-        div.className = "pedido";
-        div.innerHTML = `
-          <div class="pedido-header">
-            <div>
-              <div class="pedido-titulo">${pedido.sucursal}</div>
-              <div class="pedido-fecha">${fecha.toLocaleString('es-PY')}</div>
-            </div>
-            <span class="estado-badge ${estado}">${etiqEstado}</span>
-          </div>
-          <table>
-            <thead>
-              <tr><th>Producto</th><th style="text-align:center">Cant.</th><th style="text-align:right">Precio</th><th style="text-align:right">Subtotal</th></tr>
-            </thead>
-            <tbody>${filas}</tbody>
-          </table>
-          <div class="total-pedido">Total: Gs. ${total.toLocaleString()}</div>
-          ${pedido.comentarios ? `<p style="font-size:0.78rem;color:var(--texto-suave);margin-top:6px">💬 ${pedido.comentarios}</p>` : ""}
-        `;
-        lista.appendChild(div);
+      const snap = await getDocs(collection(db, "productos"));
+      snap.forEach(docSnap => {
+        const data = docSnap.data();
+        const nombre = String(data.nombre || "").trim();
+        const precio = Number(data.precio || 0);
+        const stock  = Number(data.stock  || 0);
+        const prod = {
+          id: docSnap.id,
+          nombre,
+          precio,
+          stock,
+          codigo: String(data.codigo || data.codigoBarra || data.barcode || "").trim()
+        };
+        productosDisponibles.push(prod);
+
+        const display = `${nombre} — Gs. ${precio.toLocaleString()}`;
+        displayToProduct.set(display, prod);
+        displayToProduct.set(nombre, prod);
+        if (prod.codigo) barcodeToProduct.set(prod.codigo, prod);
+
+        const opt = document.createElement("option");
+        opt.value = display;
+        datalist.appendChild(opt);
       });
     }
+
+    // ── Seleccionar producto ──
+    function seleccionarProducto(prod) {
+      if (!prod) return;
+      productoSelect.value = prod.nombre;
+      productoSelect.dataset.productId = prod.id;
+      productoSelect.dataset.precio    = String(prod.precio || 0);
+      precioSelected.textContent = `Gs. ${Number(prod.precio || 0).toLocaleString()}`;
+      if (!cantidadToAdd.value || Number(cantidadToAdd.value) < 1) cantidadToAdd.value = 1;
+    }
+
+    // Buscar por nombre (datalist)
+    productoSelect.addEventListener("change", () => {
+      const val = productoSelect.value.trim();
+      const prod = displayToProduct.get(val);
+      if (prod) seleccionarProducto(prod);
+    });
+    productoSelect.addEventListener("input", () => {
+      const val = productoSelect.value.trim();
+      const prod = displayToProduct.get(val);
+      if (prod) seleccionarProducto(prod);
+    });
+
+    // Buscar por código de barras
+    barcodeInput.addEventListener("change", () => {
+      const codigo = barcodeInput.value.trim();
+      if (!codigo) return;
+      const prod = barcodeToProduct.get(codigo);
+      if (prod) {
+        seleccionarProducto(prod);
+        if (Number(cantidadToAdd.value) > 0) addToCart();
+      } else {
+        mensaje.textContent = "❌ Código no encontrado.";
+        mensaje.style.color = "red";
+      }
+    });
+
+    // ── Agregar al carrito ──
+    function addToCart() {
+      mensaje.textContent = "";
+      const nombre    = productoSelect.value.trim();
+      const productId = productoSelect.dataset.productId || "";
+      const precio    = Number(productoSelect.dataset.precio || 0);
+      const cantidad  = parseInt(cantidadToAdd.value) || 0;
+
+      if (!productId || !nombre) {
+        mensaje.textContent = "Seleccioná un producto válido.";
+        mensaje.style.color = "red"; return;
+      }
+      if (cantidad <= 0) {
+        mensaje.textContent = "Ingresá una cantidad válida.";
+        mensaje.style.color = "red"; return;
+      }
+
+      const prodInfo = productosDisponibles.find(p => p.id === productId);
+      if (!prodInfo) { mensaje.textContent = "Producto no válido, recargá la página."; return; }
+
+      const existente = cartItems.find(it => it.productId === productId);
+      const totalSolicitado = (existente ? existente.cantidad : 0) + cantidad;
+      if (totalSolicitado > (prodInfo.stock || 0)) {
+        mensaje.textContent = `⚠️ Stock insuficiente. Disponible: ${prodInfo.stock}`;
+        mensaje.style.color = "orange"; return;
+      }
+
+      if (existente) existente.cantidad += cantidad;
+      else cartItems.push({ productId, nombre, precio, cantidad });
+
+      // limpiar selección
+      productoSelect.value = "";
+      barcodeInput.value   = "";
+      delete productoSelect.dataset.productId;
+      delete productoSelect.dataset.precio;
+      precioSelected.textContent = "Gs. 0";
+      cantidadToAdd.value = 1;
+
+      renderCart();
+    }
+
+    addToCartBtn.addEventListener("click", addToCart);
+
+    // ── Render carrito ──
+    function renderCart() {
+      cartTableBody.innerHTML = "";
+      let total = 0, count = 0;
+
+      cartItems.forEach(item => {
+        const subtotal = item.precio * item.cantidad;
+        total += subtotal; count += item.cantidad;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${item.nombre}</td>
+          <td>Gs. ${Number(item.precio).toLocaleString()}</td>
+          <td><input type="number" min="1" value="${item.cantidad}" data-product-id="${item.productId}" class="qty-input"></td>
+          <td>Gs. ${subtotal.toLocaleString()}</td>
+          <td><button class="btn-danger remove-btn" data-product-id="${item.productId}">🗑️</button></td>
+        `;
+        cartTableBody.appendChild(tr);
+      });
+
+      totalEl.textContent   = `Total: Gs. ${total.toLocaleString()}`;
+      cartCountEl.textContent = `${count} ítems`;
+
+      document.querySelectorAll(".qty-input").forEach(input => {
+        input.addEventListener("change", () => {
+          const pid = input.dataset.productId;
+          let newQty = parseInt(input.value) || 1;
+          if (newQty < 1) newQty = 1;
+          const prodInfo = productosDisponibles.find(p => p.id === pid);
+          if (newQty > (prodInfo?.stock || 0)) {
+            mensaje.textContent = `⚠️ Stock máx: ${prodInfo.stock}`;
+            mensaje.style.color = "orange";
+            newQty = prodInfo.stock || 1;
+            input.value = newQty;
+          } else { mensaje.textContent = ""; }
+          const item = cartItems.find(it => it.productId === pid);
+          if (item) item.cantidad = newQty;
+          renderCart();
+        });
+      });
+
+      document.querySelectorAll(".remove-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          cartItems = cartItems.filter(it => it.productId !== btn.dataset.productId);
+          renderCart();
+        });
+      });
+    }
+
+    limpiarBtn.addEventListener("click", () => {
+      cartItems = [];
+      renderCart();
+      mensaje.textContent = "Carrito limpiado.";
+      mensaje.style.color = "var(--texto-suave)";
+    });
+
+    // ── Imprimir ticket ──
+    printBtn.addEventListener("click", () => {
+      const sucursal = sucursalFija
+        ? "Sucursal " + sucursalFija.toUpperCase()
+        : (sucursalSelect.options[sucursalSelect.selectedIndex]?.text || "");
+      const win = window.open("", "_blank");
+      const rowsHtml = cartItems.map(it =>
+        `<tr><td>${it.nombre}</td><td>${it.cantidad}</td><td>Gs. ${it.precio.toLocaleString()}</td><td>Gs. ${(it.precio*it.cantidad).toLocaleString()}</td></tr>`
+      ).join("");
+      const total = cartItems.reduce((s, it) => s + it.precio * it.cantidad, 0);
+      win.document.write(`
+        <html><head><title>Ticket</title>
+        <style>body{font-family:Arial;margin:20px}table{width:100%;border-collapse:collapse}th,td{padding:6px;border:1px solid #ccc}h2{color:#14532d}</style>
+        </head><body>
+        <h2>Pedido — ${sucursal}</h2>
+        <p>${new Date().toLocaleString('es-PY')}</p>
+        <table>
+          <tr><th>Producto</th><th>Cant.</th><th>Precio U.</th><th>Subtotal</th></tr>
+          ${rowsHtml}
+          <tr><td colspan="3" style="text-align:right"><strong>Total</strong></td><td><strong>Gs. ${total.toLocaleString()}</strong></td></tr>
+        </table>
+        </body></html>
+      `);
+      win.document.close();
+      win.print();
+    });
+
+    // ── Enviar pedido ──
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      mensaje.textContent = "";
+
+      // Determinar sucursal
+      const sucursal = sucursalFija
+        ? "Sucursal " + sucursalFija.toUpperCase()
+        : sucursalSelect.value;
+
+      if (!sucursal) { mensaje.textContent = "Seleccioná una sucursal."; mensaje.style.color="red"; return; }
+      if (cartItems.length === 0) { mensaje.textContent = "El carrito está vacío."; mensaje.style.color="red"; return; }
+
+      const btn = document.getElementById("enviarPedidoBtn");
+      btn.disabled = true;
+      btn.textContent = "Enviando...";
+
+      try {
+        // Verificar stock en tiempo real
+        for (const it of cartItems) {
+          const snap = await getDoc(doc(db, "productos", it.productId));
+          const currentStock = Number(snap?.data()?.stock ?? 0);
+          if (it.cantidad > currentStock) {
+            mensaje.textContent = `⚠️ Stock insuficiente para ${it.nombre}. Disponible: ${currentStock}`;
+            mensaje.style.color = "orange";
+            btn.disabled = false; btn.textContent = "✅ Enviar Pedido"; return;
+          }
+        }
+
+        const pedidoObj = {
+          fecha: new Date().toISOString(),
+          sucursal,
+          vendedor: vendedorEmail,
+          comentarios: document.getElementById("comentarios").value,
+          productos: cartItems.map(it => ({
+            productoId: it.productId,
+            nombre: it.nombre,
+            cantidad: it.cantidad,
+            precioUnitario: it.precio
+          })),
+          total: cartItems.reduce((s, it) => s + it.precio * it.cantidad, 0),
+          estado: "pendiente"
+        };
+
+        await addDoc(collection(db, "pedidos"), pedidoObj);
+
+        // Descontar stock
+        for (const it of cartItems) {
+          const prodRef = doc(db, "productos", it.productId);
+          const snap = await getDoc(prodRef);
+          const currentStock = Number(snap.data().stock || 0);
+          await updateDoc(prodRef, { stock: currentStock - it.cantidad });
+        }
+
+        mensaje.textContent = "✅ Pedido enviado correctamente.";
+        mensaje.style.color = "var(--verde)";
+        cartItems = [];
+        renderCart();
+        form.reset();
+        precioSelected.textContent = "Gs. 0";
+        await cargarProductos();
+
+      } catch (err) {
+        console.error(err);
+        mensaje.textContent = "❌ Error al enviar pedido. Revisá la consola.";
+        mensaje.style.color = "red";
+      }
+
+      btn.disabled = false;
+      btn.textContent = "✅ Enviar Pedido";
+    });
   </script>
 </body>
 </html>
