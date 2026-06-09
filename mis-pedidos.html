@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mis Pedidos — Sion S.R.L.</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --verde: #16a34a;
+      --verde-oscuro: #14532d;
+      --verde-claro: #dcfce7;
+      --violeta: #7c3aed;
+      --amarillo: #d97706;
+      --amarillo-claro: #fef3c7;
+      --gris-fondo: #f0fdf4;
+      --gris-borde: #d1fae5;
+      --texto: #111827;
+      --texto-suave: #6b7280;
+    }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: var(--gris-fondo);
+      min-height: 100vh;
+      padding: 0;
+    }
+
+    header {
+      background: #fff;
+      border-bottom: 1px solid var(--gris-borde);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    header a {
+      text-decoration: none;
+      color: var(--verde);
+      font-size: 1.2rem;
+    }
+    header h1 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--verde-oscuro);
+    }
+    header .badge {
+      margin-left: auto;
+      background: var(--verde-claro);
+      color: var(--verde-oscuro);
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+
+    .contenedor {
+      max-width: 640px;
+      margin: 24px auto;
+      padding: 0 16px;
+    }
+
+    #loading {
+      text-align: center;
+      color: var(--texto-suave);
+      padding: 40px;
+      font-size: 0.9rem;
+    }
+
+    .pedido {
+      background: #fff;
+      border: 1.5px solid var(--gris-borde);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .pedido-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .pedido-fecha {
+      font-size: 0.82rem;
+      color: var(--texto-suave);
+    }
+
+    .estado-badge {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .estado-badge.pendiente { background: var(--amarillo-claro); color: var(--amarillo); }
+    .estado-badge.preparando { background: #ede9fe; color: var(--violeta); }
+    .estado-badge.enviado { background: var(--verde-claro); color: var(--verde-oscuro); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    th {
+      background: var(--gris-fondo);
+      text-align: left;
+      padding: 6px 8px;
+      color: var(--texto-suave);
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    td {
+      padding: 6px 8px;
+      border-top: 1px solid #f3f4f6;
+      color: var(--texto);
+    }
+
+    .total-pedido {
+      margin-top: 10px;
+      text-align: right;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--verde-oscuro);
+    }
+
+    .comentario {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: var(--texto-suave);
+      background: #f9fafb;
+      padding: 6px 10px;
+      border-radius: 6px;
+    }
+
+    .sin-pedidos {
+      text-align: center;
+      color: var(--texto-suave);
+      padding: 48px 24px;
+      font-size: 0.9rem;
+    }
+    .sin-pedidos span { font-size: 2rem; display: block; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a href="dashboard.html">←</a>
+    <h1>Mis Pedidos</h1>
+    <span class="badge" id="badge-sucursal">Sucursal</span>
+  </header>
+
+  <div class="contenedor">
+    <div id="loading">Cargando pedidos...</div>
+    <div id="lista"></div>
+  </div>
+
+  <script type="module">
+    import { auth, db } from './js/firebase-config.js';
+    import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import {
+      doc, getDoc, collection, query, where, orderBy, getDocs
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) { window.location.href = "index.html"; return; }
+
+      const snap = await getDoc(doc(db, "usuarios", user.uid));
+      if (!snap.exists()) { await signOut(auth); window.location.href = "index.html"; return; }
+
+      const datos = snap.data();
+      const sucursal = datos.sucursal || "";
+
+      document.getElementById("badge-sucursal").textContent = sucursal || datos.rol;
+
+      await cargarPedidos(sucursal, datos.rol === "admin");
+    });
+
+    async function cargarPedidos(sucursal, esAdmin) {
+      const lista = document.getElementById("lista");
+      const loading = document.getElementById("loading");
+
+      let q;
+      if (esAdmin) {
+        q = query(collection(db, "pedidos"), orderBy("fecha", "desc"));
+      } else {
+        q = query(
+          collection(db, "pedidos"),
+          where("sucursal", "==", sucursal),
+          orderBy("fecha", "desc")
+        );
+      }
+
+      // Cargar precios de productos
+      const productosSnap = await getDocs(collection(db, "productos"));
+      const precios = {};
+      productosSnap.forEach(d => { precios[d.id] = d.data().precio || 0; });
+
+      const pedidosSnap = await getDocs(q);
+      loading.remove();
+
+      if (pedidosSnap.empty) {
+        lista.innerHTML = `<div class="sin-pedidos"><span>📋</span>No hay pedidos registrados aún.</div>`;
+        return;
+      }
+
+      pedidosSnap.forEach(docPedido => {
+        const pedido = docPedido.data();
+        const productos = pedido.productos || [];
+        const fecha = new Date(pedido.fecha);
+        const estado = pedido.estado || "pendiente";
+
+        let total = 0;
+        const filas = productos.map(p => {
+          const precio = precios[p.productoId] || 0;
+          const subtotal = precio * p.cantidad;
+          total += subtotal;
+          return `<tr>
+            <td>${p.nombre}</td>
+            <td style="text-align:center">${p.cantidad}</td>
+            <td style="text-align:right">Gs. ${precio.toLocaleString()}</td>
+            <td style="text-align:right">Gs. ${subtotal.toLocaleString()}</td>
+          </tr>`;
+        }).join("");
+
+        const div = document.createElement("div");
+        div.className = "pedido";
+        div.innerHTML = `
+          <div class="pedido-header">
+            <div>
+              <div style="font-weight:700;font-size:0.9rem;color:var(--verde-oscuro)">${pedido.sucursal}</div>
+              <div class="pedido-fecha">${fecha.toLocaleString('es-PY')}</div>
+            </div>
+            <span class="estado-badge ${estado}">${estadoTexto(estado)}</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th style="text-align:center">Cant.</th>
+                <th style="text-align:right">Precio</th>
+                <th style="text-align:right">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>${filas}</tbody>
+          </table>
+          <div class="total-pedido">Total: Gs. ${total.toLocaleString()}</div>
+          ${pedido.comentarios ? `<div class="comentario">💬 ${pedido.comentarios}</div>` : ""}
+        `;
+        lista.appendChild(div);
+      });
+    }
+
+    function estadoTexto(estado) {
+      return { pendiente: "⏳ Pendiente", preparando: "🔧 Preparando", enviado: "✅ Enviado" }[estado] || estado;
+    }
+  </script>
+</body>
+</html>
