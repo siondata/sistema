@@ -3,22 +3,110 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard</title>
-  <link rel="stylesheet" href="css/estilos.css">
+  <title>Dashboard — Sion S.R.L.</title>
+  <link rel="stylesheet" href="css/estilos.css" />
 </head>
 <body>
-  <img src="img/logo.png" alt="logo sion" class="logo-img">
-  <h1>Panel Principal</h1>
-  <h2>Sion S.R.L.</h2>
-  <button onclick="location.href='pedido.html'">📝 Hacer Pedido</button>
-  <button onclick="location.href='deposito.html'">📦 Ver Depósito</button>
-  <button onclick="location.href='totales.html'">💰 Ver Totales</button>
-  <button onclick="location.href='productos.html'">📦 Ver Productos</button>
-   <button onclick="location.href='despensa.html'">📦 Crear pedido para despensa</button>
-  <button id="logoutBtn">Cerrar Sesión</button>
 
-  <script type="module" src="js/auth.js"></script>
+  <!-- BARRA DE MENÚ -->
+  <nav class="nav-bar">
+    <img src="img/logo.png" alt="Sion" class="logo-img" style="height:28px" onerror="this.style.display='none'">
+    <span class="brand">Sion S.R.L.</span>
+    <div class="nav-spacer"></div>
+    <span class="badge verde" id="badge-usuario">...</span>
+    <button class="nav-btn rojo" id="logoutBtn">Salir</button>
+  </nav>
+
+  <div class="contenedor" style="padding-top:16px">
+
+    <!-- TÍTULO -->
+    <div style="margin-bottom:14px">
+      <h1>Panel Principal</h1>
+      <p style="color:var(--texto-suave);font-size:0.8rem">Seleccioná una opción</p>
+    </div>
+
+    <!-- SECCIÓN SUCURSAL -->
+    <p style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--texto-suave);margin-bottom:7px">Pedidos</p>
+    <div class="dashboard-grid" style="margin-bottom:16px">
+      <a href="pedido.html" class="dash-btn v">
+        <span class="icon">📝</span>
+        <span class="texto">
+          <span class="label">Hacer Pedido</span>
+          <span class="desc">Nuevo pedido al depósito</span>
+        </span>
+      </a>
+      <a href="mis-pedidos.html" class="dash-btn m">
+        <span class="icon">📋</span>
+        <span class="texto">
+          <span class="label">Mis Pedidos</span>
+          <span class="desc">Ver historial y estado</span>
+        </span>
+      </a>
+      <a href="despensa.html" class="dash-btn v">
+        <span class="icon">🛒</span>
+        <span class="texto">
+          <span class="label">Pedido Despensa</span>
+          <span class="desc">Pedido interno sucursal</span>
+        </span>
+      </a>
+    </div>
+
+    <!-- SECCIÓN ADMIN (oculta por defecto) -->
+    <div class="admin-section" style="display:none">
+      <p style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--texto-suave);margin-bottom:7px">Administración</p>
+      <div class="dashboard-grid">
+        <a href="deposito.html" class="dash-btn m">
+          <span class="icon">📦</span>
+          <span class="texto">
+            <span class="label">Depósito</span>
+            <span class="desc">Todos los pedidos</span>
+          </span>
+        </a>
+        <a href="totales.html" class="dash-btn v">
+          <span class="icon">💰</span>
+          <span class="texto">
+            <span class="label">Totales</span>
+            <span class="desc">Resumen por sucursal</span>
+          </span>
+        </a>
+        <a href="productos.html" class="dash-btn m">
+          <span class="icon">🗃️</span>
+          <span class="texto">
+            <span class="label">Productos</span>
+            <span class="desc">Inventario y precios</span>
+          </span>
+        </a>
+      </div>
+    </div>
+
+  </div>
+
+  <script type="module">
+    import { auth, db } from './js/firebase-config.js';
+    import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) { window.location.href = "index.html"; return; }
+
+      const snap = await getDoc(doc(db, "usuarios", user.uid));
+      if (!snap.exists()) { await signOut(auth); window.location.href = "index.html"; return; }
+
+      const datos = snap.data();
+      const badge = document.getElementById("badge-usuario");
+
+      if (datos.rol === "admin") {
+        badge.textContent = "Admin";
+        badge.classList.replace("verde", "magenta");
+        document.querySelectorAll(".admin-section").forEach(el => el.style.display = "block");
+      } else {
+        badge.textContent = datos.sucursal || "Sucursal";
+      }
+    });
+
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      signOut(auth).then(() => window.location.href = "index.html");
+    });
+  </script>
 </body>
 </html>
-
-
