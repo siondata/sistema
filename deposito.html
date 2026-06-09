@@ -2,176 +2,139 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Depósito</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-    }
-    .pedido {
-      border: 2px solid #ccc;
-      padding: 10px;
-      margin-bottom: 20px;
-      border-radius: 10px;
-    }
-    .pedido.reciente {
-      background-color: #e7ffe7;
-      border-left: 5px solid green;
-    }
-    .pedido.antiguo {
-      opacity: 0.8;
-    }
-    .total {
-      font-weight: bold;
-      margin-top: 10px;
-    }
-    .filtros {
-      margin-bottom: 20px;
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Depósito — Sion S.R.L.</title>
+  <link rel="stylesheet" href="css/estilos.css" />
 </head>
 <body>
-  <h1>Pedidos Recibidos por Sucursal - SION S.R.L</h1>
 
+  <!-- NAV -->
+  <nav class="nav-bar">
+    <a href="dashboard.html" class="nav-btn verde">← Volver</a>
+    <span class="brand">Depósito</span>
+    <div class="nav-spacer"></div>
+    <button class="nav-btn verde" onclick="window.print()">🖨️ Imprimir</button>
+    <button class="nav-btn rojo" id="logoutBtn">Salir</button>
+  </nav>
+
+  <!-- FILTROS -->
   <div class="filtros">
-    <input type="text" id="filtroSucursal" placeholder="Filtrar por sucursal" />
+    <input type="text" id="filtroSucursal" placeholder="Filtrar sucursal..." />
     <input type="date" id="filtroFecha" />
-    <button onclick="window.print()">🖨️ Imprimir</button>
   </div>
 
-  <div id="contenedor"></div>
-  
+  <div class="contenedor" style="padding-top:12px">
+    <div class="resumen-box" id="resumen"></div>
+    <div id="loading" class="sin-datos"><span>⏳</span>Cargando pedidos...</div>
+    <div id="contenedor-pedidos"></div>
+  </div>
+
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import {
-      getFirestore, collection, getDocs, doc, getDoc, query, orderBy, updateDoc
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-    import {
-      getAuth, onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { auth, db } from './js/firebase-config.js';
+    import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { doc, getDoc, collection, getDocs, query, orderBy, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCr0SM_u0c4aEG_tT_CXWLcvd6alZJT44c",
-      authDomain: "siondata22.firebaseapp.com",
-      projectId: "siondata22",
-      storageBucket: "siondata22.appspot.com",
-      messagingSenderId: "946379205241",
-      appId: "1:946379205241:web:0fe04a6246518451ee42a8"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
-
-    const contenedor = document.getElementById("contenedor");
-    const resumen = document.getElementById("resumen");
-
-    const filtroSucursal = document.getElementById("filtroSucursal");
-    const filtroFecha = document.getElementById("filtroFecha");
-
-    let pedidosHTML = [];
-
-    onAuthStateChanged(auth, user => {
-      if (user) cargarPedidos();
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      signOut(auth).then(() => window.location.href = "index.html");
     });
 
-    async function cargarPedidos() {
-      const q = query(collection(db, "pedidos"), orderBy("fecha", "desc"));
-      const pedidosSnapshot = await getDocs(q);
-      const resumenSucursal = {};
-      pedidosHTML = [];
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) { window.location.href = "index.html"; return; }
+      const snap = await getDoc(doc(db, "usuarios", user.uid));
+      if (!snap.exists() || snap.data().rol !== "admin") {
+        window.location.href = "dashboard.html"; return;
+      }
+      await cargarProductos();
+      await cargarPedidos();
+    });
 
-      for (const docPedido of pedidosSnapshot.docs) {
+    let precios = {};
+    let pedidosEls = [];
+
+    async function cargarProductos() {
+      const snap = await getDocs(collection(db, "productos"));
+      snap.forEach(d => { precios[d.id] = d.data().precio || 0; });
+    }
+
+    async function cargarPedidos() {
+      const loading = document.getElementById("loading");
+      const contenedor = document.getElementById("contenedor-pedidos");
+      const resumenEl = document.getElementById("resumen");
+      const q = query(collection(db, "pedidos"), orderBy("fecha", "desc"));
+      const snapshot = await getDocs(q);
+      loading.remove();
+
+      const resumenSucursal = {};
+      pedidosEls = [];
+
+      snapshot.forEach(docPedido => {
         const pedido = docPedido.data();
         const productos = pedido.productos || [];
         let total = 0;
 
-        const tablaFilas = await Promise.all(productos.map(async p => {
-          const refProd = doc(db, "productos", p.productoId);
-          const snap = await getDoc(refProd);
-          const precio = snap.exists() ? (snap.data().precio || 0) : 0;
-          const subtotal = precio * p.cantidad;
-          total += subtotal;
-          return `
-            <tr>
-              <td>${p.nombre}</td>
-              <td>${p.cantidad}</td>
-              <td>Gs. ${precio.toLocaleString()}</td>
-              <td>Gs. ${subtotal.toLocaleString()}</td>
-            </tr>
-          `;
-        }));
+        const filas = productos.map(p => {
+          const precio = precios[p.productoId] || 0;
+          const sub = precio * p.cantidad;
+          total += sub;
+          return `<tr>
+            <td>${p.nombre}</td>
+            <td>${p.cantidad}</td>
+            <td>Gs. ${precio.toLocaleString()}</td>
+            <td>Gs. ${sub.toLocaleString()}</td>
+          </tr>`;
+        }).join("");
 
-        const fechaPedido = new Date(pedido.fecha);
-        const esHoy = fechaPedido.toDateString() === new Date().toDateString();
+        const fecha = new Date(pedido.fecha);
+        const esHoy = fecha.toDateString() === new Date().toDateString();
         const estado = pedido.estado || "pendiente";
-        const estadoSelect = `
-          <label>Estado:
-            <select class="estado-select" data-id="${docPedido.id}">
-              <option value="pendiente" ${estado === "pendiente" ? "selected" : ""}>Pendiente</option>
-              <option value="preparando" ${estado === "preparando" ? "selected" : ""}>Preparando</option>
-              <option value="enviado" ${estado === "enviado" ? "selected" : ""}>Enviado</option>
-            </select>
-          </label>
-        `;
 
         const div = document.createElement("div");
         div.className = "pedido " + (esHoy ? "reciente" : "antiguo");
-        div.dataset.sucursal = pedido.sucursal.toLowerCase();
-        div.dataset.fecha = fechaPedido.toISOString().split("T")[0];
+        div.dataset.sucursal = (pedido.sucursal || "").toLowerCase();
+        div.dataset.fecha = fecha.toISOString().split("T")[0];
         div.innerHTML = `
-          <h3>${pedido.sucursal} - ${fechaPedido.toLocaleString()}</h3>
-          ${estadoSelect}
-          <table border="1" cellpadding="5">
-            <thead>
-              <tr>
-                <th>Producto</th>
-                <th>Cantidad</th>
-                <th>Precio Unitario</th>
-                <th>Total</th>
-              </tr>
-            </thead>
-            <tbody>${tablaFilas.join("")}</tbody>
+          <div class="pedido-header">
+            <div>
+              <div class="pedido-titulo">${pedido.sucursal}</div>
+              <div class="pedido-fecha">${fecha.toLocaleString('es-PY')}</div>
+            </div>
+            <select class="estado-select" data-id="${docPedido.id}">
+              <option value="pendiente"  ${estado==="pendiente" ?"selected":""}>⏳ Pendiente</option>
+              <option value="preparando" ${estado==="preparando"?"selected":""}>🔧 Preparando</option>
+              <option value="enviado"    ${estado==="enviado"   ?"selected":""}>✅ Enviado</option>
+            </select>
+          </div>
+          <table>
+            <thead><tr><th>Producto</th><th>Cant.</th><th>Precio unit.</th><th>Total</th></tr></thead>
+            <tbody>${filas}</tbody>
           </table>
-          <div class="total">Total estimado: <strong>Gs. ${total.toLocaleString()}</strong></div>
+          <div class="total-pedido">Total: Gs. ${total.toLocaleString()}</div>
         `;
         contenedor.appendChild(div);
-        pedidosHTML.push(div);
-
+        pedidosEls.push(div);
         resumenSucursal[pedido.sucursal] = (resumenSucursal[pedido.sucursal] || 0) + total;
-      }
+      });
 
-      generarResumen(resumenSucursal);
-      agregarListenersEstado();
-    }
+      resumenEl.innerHTML = `<h2>Resumen por Sucursal</h2><ul>` +
+        Object.entries(resumenSucursal).map(([s, t]) =>
+          `<li>${s}: Gs. ${t.toLocaleString()}</li>`).join("") + `</ul>`;
 
-    function generarResumen(resumenSucursal) {
-      resumen.innerHTML = "<h2>Resumen por Sucursal</h2><ul>" +
-        Object.entries(resumenSucursal).map(([suc, total]) =>
-          `<li>${suc}: Gs. ${total.toLocaleString()}</li>`).join("") +
-        "</ul>";
-    }
-
-    function agregarListenersEstado() {
-      document.querySelectorAll(".estado-select").forEach(select => {
-        select.addEventListener("change", async () => {
-          const id = select.dataset.id;
-          const estado = select.value;
-          await updateDoc(doc(db, "pedidos", id), { estado });
+      document.querySelectorAll(".estado-select").forEach(sel => {
+        sel.addEventListener("change", async () => {
+          await updateDoc(doc(db, "pedidos", sel.dataset.id), { estado: sel.value });
         });
       });
     }
 
-    filtroSucursal.addEventListener("input", filtrar);
-    filtroFecha.addEventListener("change", filtrar);
+    document.getElementById("filtroSucursal").addEventListener("input", filtrar);
+    document.getElementById("filtroFecha").addEventListener("change", filtrar);
 
     function filtrar() {
-      const suc = filtroSucursal.value.toLowerCase();
-      const fecha = filtroFecha.value;
-      pedidosHTML.forEach(div => {
-        const coincideSucursal = div.dataset.sucursal.includes(suc);
-        const coincideFecha = !fecha || div.dataset.fecha === fecha;
-        div.style.display = coincideSucursal && coincideFecha ? "" : "none";
+      const suc = document.getElementById("filtroSucursal").value.toLowerCase();
+      const fecha = document.getElementById("filtroFecha").value;
+      pedidosEls.forEach(div => {
+        const ok = div.dataset.sucursal.includes(suc) && (!fecha || div.dataset.fecha === fecha);
+        div.style.display = ok ? "" : "none";
       });
     }
   </script>
