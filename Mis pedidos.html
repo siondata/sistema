@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mis Pedidos — Sion S.R.L.</title>
+  <link rel="stylesheet" href="css/estilos.css" />
+</head>
+<body>
+
+  <nav class="nav-bar">
+    <a href="dashboard.html" class="nav-btn verde">← Volver</a>
+    <span class="brand">Mis Pedidos</span>
+    <div class="nav-spacer"></div>
+    <span class="badge verde" id="badge-sucursal">...</span>
+    <button class="nav-btn rojo" id="logoutBtn">Salir</button>
+  </nav>
+
+  <div class="contenedor" style="padding-top:14px">
+    <div id="loading" class="sin-datos"><span>⏳</span>Cargando pedidos...</div>
+    <div id="lista"></div>
+  </div>
+
+  <script type="module">
+    import { auth, db } from './js/firebase-config.js';
+    import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { doc, getDoc, collection, query, where, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      signOut(auth).then(() => window.location.href = "index.html");
+    });
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) { window.location.href = "index.html"; return; }
+      const snap = await getDoc(doc(db, "usuarios", user.uid));
+      if (!snap.exists()) { await signOut(auth); window.location.href = "index.html"; return; }
+
+      const datos = snap.data();
+      document.getElementById("badge-sucursal").textContent = datos.sucursal || datos.rol;
+      await cargarPedidos(datos.sucursal, datos.rol === "admin");
+    });
+
+    async function cargarPedidos(sucursal, esAdmin) {
+      const lista = document.getElementById("lista");
+      const loading = document.getElementById("loading");
+
+      const productosSnap = await getDocs(collection(db, "productos"));
+      const precios = {};
+      productosSnap.forEach(d => { precios[d.id] = d.data().precio || 0; });
+
+      const q = esAdmin
+        ? query(collection(db, "pedidos"), orderBy("fecha", "desc"))
+        : query(collection(db, "pedidos"), where("sucursal", "==", sucursal), orderBy("fecha", "desc"));
+
+      const pedidosSnap = await getDocs(q);
+      loading.remove();
+
+      if (pedidosSnap.empty) {
+        lista.innerHTML = `<div class="sin-datos"><span>📋</span>No hay pedidos registrados aún.</div>`;
+        return;
+      }
+
+      pedidosSnap.forEach(docPedido => {
+        const pedido = docPedido.data();
+        const productos = pedido.productos || [];
+        const fecha = new Date(pedido.fecha);
+        const estado = pedido.estado || "pendiente";
+        let total = 0;
+
+        const filas = productos.map(p => {
+          const precio = precios[p.productoId] || 0;
+          const sub = precio * p.cantidad;
+          total += sub;
+          return `<tr>
+            <td>${p.nombre}</td>
+            <td style="text-align:center">${p.cantidad}</td>
+            <td style="text-align:right">Gs. ${precio.toLocaleString()}</td>
+            <td style="text-align:right">Gs. ${sub.toLocaleString()}</td>
+          </tr>`;
+        }).join("");
+
+        const etiqEstado = {
+          pendiente:  "⏳ Pendiente",
+          preparando: "🔧 Preparando",
+          enviado:    "✅ Enviado"
+        }[estado] || estado;
+
+        const div = document.createElement("div");
+        div.className = "pedido";
+        div.innerHTML = `
+          <div class="pedido-header">
+            <div>
+              <div class="pedido-titulo">${pedido.sucursal}</div>
+              <div class="pedido-fecha">${fecha.toLocaleString('es-PY')}</div>
+            </div>
+            <span class="estado-badge ${estado}">${etiqEstado}</span>
+          </div>
+          <table>
+            <thead>
+              <tr><th>Producto</th><th style="text-align:center">Cant.</th><th style="text-align:right">Precio</th><th style="text-align:right">Subtotal</th></tr>
+            </thead>
+            <tbody>${filas}</tbody>
+          </table>
+          <div class="total-pedido">Total: Gs. ${total.toLocaleString()}</div>
+          ${pedido.comentarios ? `<p style="font-size:0.78rem;color:var(--texto-suave);margin-top:6px">💬 ${pedido.comentarios}</p>` : ""}
+        `;
+        lista.appendChild(div);
+      });
+    }
+  </script>
+</body>
+</html>
